@@ -37,7 +37,8 @@ connections:
 
   mysql2:
     arunit:
-      username: rails
+      username: <%= ENV["MYSQL_USER"] || 'rails' %>
+      port: <%= ENV["MYSQL_PORT"] || 3306 %>
       encoding: utf8mb4
       collation: utf8mb4_unicode_ci
 <% if ENV['MYSQL_PREPARED_STATEMENTS'] %>
@@ -47,7 +48,8 @@ connections:
       host: <%= ENV['MYSQL_HOST'] %>
 <% end %>
     arunit2:
-      username: rails
+      username: <%= ENV["MYSQL_USER"] || 'rails' %>
+      port: <%= ENV["MYSQL_PORT"] || 3306 %>
       encoding: utf8mb4
       collation: utf8mb4_general_ci
 <% if ENV['MYSQL_PREPARED_STATEMENTS'] %>
