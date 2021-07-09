@@ -14,6 +14,7 @@ require "models/interest"
 require "models/treasure"
 
 class StrictLoadingTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :developers, :developers_projects, :projects, :ships
 
   def test_strict_loading!
@@ -583,6 +584,7 @@ class StrictLoadingTest < ActiveRecord::TestCase
 end
 
 class StrictLoadingFixturesTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :strict_zines
 
   test "strict loading violations are ignored on fixtures" do
