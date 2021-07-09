@@ -17,7 +17,7 @@ require "models/department"
 
 class HasManyThroughDisableJoinsAssociationsTest < ActiveRecord::TestCase
   fixtures :posts, :authors, :comments, :pirates
-
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     @author = authors(:mary)
     @post = @author.posts.create(title: "title", body: "body")
