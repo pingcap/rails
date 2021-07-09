@@ -38,6 +38,7 @@ require "models/seminar"
 require "models/session"
 
 class HasManyThroughAssociationsTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :posts, :readers, :people, :comments, :authors, :categories, :taggings, :tags,
            :owners, :pets, :toys, :jobs, :references, :companies, :members, :author_addresses,
            :subscribers, :books, :subscriptions, :developers, :categorizations, :essays,
