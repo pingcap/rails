@@ -131,7 +131,7 @@ class AsynchronousQueriesTest < ActiveRecord::TestCase
 end
 
 class AsynchronousQueriesWithTransactionalTest < ActiveRecord::TestCase
-  self.use_transactional_tests = true
+  self.use_transactional_tests = false unless supports_savepoints?
 
   include AsynchronousQueriesSharedTests
 
