@@ -5,6 +5,7 @@ require "models/pirate"
 require "models/bird"
 
 class NestedAttributesWithCallbacksTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   Pirate.has_many(:birds_with_add_load,
                   class_name: "Bird",
                   before_add: proc { |p, b|
