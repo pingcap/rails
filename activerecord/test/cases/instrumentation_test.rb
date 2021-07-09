@@ -5,6 +5,7 @@ require "models/book"
 
 module ActiveRecord
   class InstrumentationTest < ActiveRecord::TestCase
+    self.use_transactional_tests = false unless supports_savepoints?
     def setup
       ActiveRecord::Base.connection.schema_cache.add(Book.table_name)
     end

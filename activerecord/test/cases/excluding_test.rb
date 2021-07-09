@@ -5,6 +5,7 @@ require "models/post"
 require "models/comment"
 
 class ExcludingTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :posts, :comments
 
   setup { @post = posts(:welcome) }

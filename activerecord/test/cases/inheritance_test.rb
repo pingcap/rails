@@ -31,6 +31,7 @@ module InheritanceTestHelper
 end
 
 class InheritanceTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   include InheritanceTestHelper
   fixtures :companies, :projects, :subscribers, :accounts, :vegetables, :memberships
 
@@ -503,6 +504,7 @@ class InheritanceTest < ActiveRecord::TestCase
 end
 
 class InheritanceComputeTypeTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   include InheritanceTestHelper
   fixtures :companies
 

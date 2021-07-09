@@ -5,6 +5,7 @@ require "models/car"
 
 if ActiveRecord::Base.connection.supports_explain?
   class ExplainTest < ActiveRecord::TestCase
+    self.use_transactional_tests = false unless supports_savepoints?
     fixtures :cars
 
     def base

@@ -6,6 +6,7 @@ require "models/book"
 require "active_support/log_subscriber/test_helper"
 
 class EnumTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :books, :authors, :author_addresses
 
   setup do

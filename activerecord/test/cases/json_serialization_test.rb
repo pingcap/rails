@@ -20,6 +20,7 @@ module JsonSerializationHelpers
 end
 
 class JsonSerializationTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   include JsonSerializationHelpers
 
   class NamespacedContact < Contact

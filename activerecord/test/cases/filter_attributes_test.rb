@@ -8,6 +8,7 @@ require "models/user"
 require "pp"
 
 class FilterAttributesTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :"admin/users", :"admin/accounts"
 
   setup do

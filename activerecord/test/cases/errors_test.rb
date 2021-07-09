@@ -3,6 +3,7 @@
 require "cases/helper"
 
 class ErrorsTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def test_can_be_instantiated_with_no_args
     base = ActiveRecord::ActiveRecordError
     error_klasses = ObjectSpace.each_object(Class).select { |klass| klass < base }

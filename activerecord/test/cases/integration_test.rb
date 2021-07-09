@@ -8,6 +8,7 @@ require "models/owner"
 require "models/pet"
 
 class IntegrationTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :companies, :developers, :owners, :pets
 
   def test_to_param_should_return_string

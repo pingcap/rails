@@ -6,6 +6,7 @@ require "active_record/explain_registry"
 
 if ActiveRecord::Base.connection.supports_explain?
   class ExplainSubscriberTest < ActiveRecord::TestCase
+    self.use_transactional_tests = false unless supports_savepoints?
     SUBSCRIBER = ActiveRecord::ExplainSubscriber.new
 
     def setup

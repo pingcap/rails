@@ -7,6 +7,7 @@ require "models/movie"
 
 module ActiveRecord
   class DupTest < ActiveRecord::TestCase
+    self.use_transactional_tests = false unless supports_savepoints?
     fixtures :topics
 
     def test_dup

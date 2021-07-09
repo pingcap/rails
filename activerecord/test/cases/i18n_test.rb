@@ -5,6 +5,7 @@ require "models/topic"
 require "models/reply"
 
 class ActiveRecordI18nTests < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     I18n.backend = I18n::Backend::Simple.new
   end

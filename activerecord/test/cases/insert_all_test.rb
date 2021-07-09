@@ -13,6 +13,7 @@ class ReadonlyNameBook < Book
 end
 
 class InsertAllTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :books
 
   def setup

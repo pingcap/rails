@@ -5,6 +5,7 @@ require "models/lesson"
 require "models/student"
 
 class HabtmDestroyOrderTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   test "may not delete a lesson with students" do
     sicp = Lesson.new(name: "SICP")
     ben = Student.new(name: "Ben Bitdiddle")

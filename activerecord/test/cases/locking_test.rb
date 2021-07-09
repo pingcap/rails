@@ -30,6 +30,7 @@ class ReadonlyNameShip < Ship
 end
 
 class OptimisticLockingTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :people, :legacy_things, :references, :string_key_objects, :peoples_treasures
 
   def test_quote_value_passed_lock_col

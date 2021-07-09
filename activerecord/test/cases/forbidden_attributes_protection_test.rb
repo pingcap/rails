@@ -9,6 +9,7 @@ require "models/treasure"
 require "support/stubs/strong_parameters"
 
 class ForbiddenAttributesProtectionTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def test_forbidden_attributes_cannot_be_used_for_mass_assignment
     params = ProtectedParams.new(first_name: "Guille", gender: "m")
     assert_raises(ActiveModel::ForbiddenAttributesError) do

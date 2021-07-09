@@ -4,6 +4,7 @@ require "cases/helper"
 require "models/topic"
 
 class FinderRespondToTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :topics
 
   def test_should_preserve_normal_respond_to_behaviour_on_base

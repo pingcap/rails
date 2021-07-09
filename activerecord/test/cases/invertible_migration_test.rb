@@ -7,6 +7,7 @@ end
 
 module ActiveRecord
   class InvertibleMigrationTest < ActiveRecord::TestCase
+    self.use_transactional_tests = false unless supports_savepoints?
     class SilentMigration < ActiveRecord::Migration::Current
       def write(text = "")
         # sssshhhhh!!

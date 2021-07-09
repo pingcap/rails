@@ -7,6 +7,7 @@ require "models/post"
 require "active_support/log_subscriber/test_helper"
 
 class LogSubscriberTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   include ActiveSupport::LogSubscriber::TestHelper
   include ActiveSupport::Logger::Severity
   REGEXP_CLEAR = Regexp.escape(ActiveRecord::LogSubscriber::CLEAR)
