@@ -4,6 +4,7 @@ require "cases/encryption/helper"
 require "models/book_encrypted"
 
 class ActiveRecord::Encryption::ExtendedDeterministicQueriesTest < ActiveRecord::EncryptionTestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   setup do
     ActiveRecord::Encryption.config.support_unencrypted_data = true
   end
