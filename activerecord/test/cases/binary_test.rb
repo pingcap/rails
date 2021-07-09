@@ -4,6 +4,7 @@ require "cases/helper"
 require "models/binary"
 
 class BinaryTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   FIXTURES = %w(flowers.jpg example.log test.txt)
 
   def test_mixed_encoding
