@@ -792,6 +792,7 @@ class QueryCacheTest < ActiveRecord::TestCase
 end
 
 class QueryCacheExpiryTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :tasks, :posts, :categories, :categories_posts
 
   def teardown
