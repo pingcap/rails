@@ -5,6 +5,7 @@ require "models/notification"
 require "models/user"
 
 class SuppressorTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def test_suppresses_create
     assert_no_difference -> { Notification.count } do
       Notification.suppress do
