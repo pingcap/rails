@@ -14,6 +14,7 @@ require "models/pet"
 require "active_support/hash_with_indifferent_access"
 
 class TestNestedAttributesInGeneral < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   teardown do
     Pirate.accepts_nested_attributes_for :ship, allow_destroy: true, reject_if: proc(&:empty?)
   end
@@ -232,6 +233,7 @@ class TestNestedAttributesInGeneral < ActiveRecord::TestCase
 end
 
 class TestNestedAttributesOnAHasOneAssociation < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     @pirate = Pirate.create!(catchphrase: "Don' botharrr talkin' like one, savvy?")
     @ship = @pirate.create_ship(name: "Nights Dirty Lightning")
@@ -422,6 +424,7 @@ class TestNestedAttributesOnAHasOneAssociation < ActiveRecord::TestCase
 end
 
 class TestNestedAttributesOnABelongsToAssociation < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     @ship = Ship.new(name: "Nights Dirty Lightning")
     @pirate = @ship.build_pirate(catchphrase: "Aye")
@@ -861,6 +864,7 @@ module NestedAttributesOnACollectionAssociationTests
 end
 
 class TestNestedAttributesOnAHasManyAssociation < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     @association_type = :has_many
     @association_name = :birds
@@ -883,6 +887,7 @@ class TestNestedAttributesOnAHasManyAssociation < ActiveRecord::TestCase
 end
 
 class TestNestedAttributesOnAHasAndBelongsToManyAssociation < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     @association_type = :has_and_belongs_to_many
     @association_name = :parrots
@@ -929,6 +934,7 @@ module NestedAttributesLimitTests
 end
 
 class TestNestedAttributesLimitNumeric < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     Pirate.accepts_nested_attributes_for :parrots, limit: 2
 
@@ -939,6 +945,7 @@ class TestNestedAttributesLimitNumeric < ActiveRecord::TestCase
 end
 
 class TestNestedAttributesLimitSymbol < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     Pirate.accepts_nested_attributes_for :parrots, limit: :parrots_limit
 
@@ -949,6 +956,7 @@ class TestNestedAttributesLimitSymbol < ActiveRecord::TestCase
 end
 
 class TestNestedAttributesLimitProc < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   def setup
     Pirate.accepts_nested_attributes_for :parrots, limit: proc { 2 }
 
@@ -959,6 +967,7 @@ class TestNestedAttributesLimitProc < ActiveRecord::TestCase
 end
 
 class TestNestedAttributesWithNonStandardPrimaryKeys < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :owners, :pets
 
   def setup
@@ -1107,6 +1116,7 @@ class TestHasManyAutosaveAssociationWhichItselfHasAutosaveAssociations < ActiveR
 end
 
 class TestNestedAttributesWithExtend < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   setup do
     Pirate.accepts_nested_attributes_for :treasures
   end
