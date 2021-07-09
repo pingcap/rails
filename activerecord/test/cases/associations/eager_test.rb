@@ -32,6 +32,7 @@ require "models/mentor"
 require "models/contract"
 
 class EagerLoadingTooManyIdsTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :citations
 
   def test_preloading_too_many_ids
@@ -44,6 +45,7 @@ class EagerLoadingTooManyIdsTest < ActiveRecord::TestCase
 end
 
 class EagerAssociationTest < ActiveRecord::TestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :posts, :comments, :authors, :essays, :author_addresses, :categories, :categories_posts,
             :companies, :accounts, :tags, :taggings, :ratings, :people, :readers, :categorizations,
             :owners, :pets, :author_favorites, :jobs, :references, :subscribers, :subscriptions, :books,
