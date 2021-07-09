@@ -47,6 +47,10 @@ connections:
 <% if ENV['MYSQL_HOST'] %>
       host: <%= ENV['MYSQL_HOST'] %>
 <% end %>
+<% if ENV['tidb'] %>
+      variables:
+          tidb_enable_noop_functions: ON
+<% end %>
     arunit2:
       username: <%= ENV["MYSQL_USER"] || 'rails' %>
       port: <%= ENV["MYSQL_PORT"] || 3306 %>
@@ -57,6 +61,10 @@ connections:
 <% end %>
 <% if ENV['MYSQL_HOST'] %>
       host: <%= ENV['MYSQL_HOST'] %>
+<% end %>
+<% if ENV['tidb'] %>
+      variables:
+          tidb_enable_noop_functions: ON
 <% end %>
 
   oracle:
