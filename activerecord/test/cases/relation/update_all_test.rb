@@ -17,7 +17,7 @@ require "models/warehouse_thing"
 
 class UpdateAllTest < ActiveRecord::TestCase
   fixtures :authors, :author_addresses, :comments, :developers, :posts, :people, :pets, :toys, :tags, :taggings, "warehouse-things"
-
+  self.use_transactional_tests = false unless supports_savepoints?
   class TopicWithCallbacks < ActiveRecord::Base
     self.table_name = :topics
     cattr_accessor :topic_count
