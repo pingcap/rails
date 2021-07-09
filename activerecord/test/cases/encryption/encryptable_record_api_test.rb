@@ -6,6 +6,7 @@ require "models/book_encrypted"
 require "models/post_encrypted"
 
 class ActiveRecord::Encryption::EncryptableRecordApiTest < ActiveRecord::EncryptionTestCase
+  self.use_transactional_tests = false unless supports_savepoints?
   fixtures :posts
 
   setup do
