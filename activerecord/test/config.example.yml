@@ -49,6 +49,9 @@ connections:
 <% end %>
 <% if ENV['MYSQL_SOCK'] %>
       socket: "<%= ENV['MYSQL_SOCK'] %>"
+<% if ENV['tidb'] %>
+      variables:
+          tidb_enable_noop_functions: ON
 <% end %>
     arunit2:
       username: <%= ENV["MYSQL_USER"] || 'rails' %>
@@ -63,6 +66,9 @@ connections:
 <% end %>
 <% if ENV['MYSQL_SOCK'] %>
       socket: "<%= ENV['MYSQL_SOCK'] %>"
+<% if ENV['tidb'] %>
+      variables:
+          tidb_enable_noop_functions: ON
 <% end %>
 
   oracle:
