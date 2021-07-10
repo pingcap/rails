@@ -5,6 +5,7 @@ require "models/college"
 require "models/course"
 require "models/professor"
 require "models/other_dog"
+require_relative "./savepoint_patch"
 
 module ARTest
   def self.connection_name
