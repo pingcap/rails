@@ -112,6 +112,7 @@ module ActiveRecord
 
       if ActiveRecord::Base.connection.supports_bulk_alter?
         def test_timestamps_have_null_constraints_if_not_present_in_migration_of_change_table_with_bulk
+          skip("TiDB issue: https://github.com/pingcap/tidb/issues/14766")
           migration = Class.new(ActiveRecord::Migration[4.2]) {
             def migrate(x)
               change_table :testings, bulk: true do |t|
@@ -174,6 +175,7 @@ module ActiveRecord
 
       if ActiveRecord::Base.connection.supports_bulk_alter?
         def test_timestamps_doesnt_set_precision_on_change_table_with_bulk
+          skip("TiDB issue: https://github.com/pingcap/tidb/issues/14766") if ENV["tidb"].present?
           migration = Class.new(ActiveRecord::Migration[5.2]) {
             def migrate(x)
               change_table :testings, bulk: true do |t|
@@ -282,7 +284,7 @@ module ActiveRecord
         }.new
 
         ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
-
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         assert connection.index_exists?(:more_testings, [:widget_type, :widget_id], name: :index_more_testings_on_widget_type_and_widget_id)
         assert connection.index_exists?(:more_testings, [:gizmo_type, :gizmo_id], name: :index_more_testings_on_gizmo_type_and_gizmo_id)
       ensure
@@ -419,6 +421,7 @@ module LegacyPrimaryKeyTestCases
   end
 
   def test_legacy_primary_key_in_create_table_should_be_integer
+    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#primary-key") if ENV['tidb'].present?
     @migration = Class.new(migration_class) {
       def change
         create_table :legacy_primary_keys, id: false do |t|
