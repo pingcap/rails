@@ -851,6 +851,7 @@ class MigrationTest < ActiveRecord::TestCase
 
   unless mysql_enforcing_gtid_consistency?
     def test_create_table_with_query
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/4754") if ENV['tidb'].present?
       Person.connection.create_table :table_from_query_testings, as: "SELECT id FROM people WHERE id = 1"
 
       columns = Person.connection.columns(:table_from_query_testings)
@@ -862,6 +863,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_create_table_with_query_from_relation
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/4754") if ENV['tidb'].present?
       Person.connection.create_table :table_from_query_testings, as: Person.select(:id).where(id: 1)
 
       columns = Person.connection.columns(:table_from_query_testings)
@@ -1134,6 +1136,7 @@ end
 
 class ExplicitlyNamedIndexMigrationTest < ActiveRecord::TestCase
   def test_drop_index_by_name
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     connection = Person.connection
     connection.create_table :values, force: true do |t|
       t.integer :value
@@ -1162,6 +1165,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_adding_multiple_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       classname = ActiveRecord::Base.connection.class.name[/[^:]*$/]
       expected_query_count = {
         "Mysql2Adapter"     => 1,
@@ -1187,6 +1191,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_rename_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :qualification
       end
@@ -1204,6 +1209,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_removing_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :qualification, :experience
       end
@@ -1222,6 +1228,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_adding_timestamps
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :title
       end
@@ -1240,6 +1247,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_removing_timestamps
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.timestamps
       end
@@ -1258,6 +1266,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_adding_indexes
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :username
         t.string :name
@@ -1290,6 +1299,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_removing_index
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :name
         t.index :name
@@ -1319,6 +1329,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_changing_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :name
         t.date :birthdate
@@ -1348,6 +1359,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_changing_index
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :username
         t.index :username, name: :username_index
