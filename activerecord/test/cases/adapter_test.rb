@@ -77,6 +77,7 @@ module ActiveRecord
     end
 
     def test_indexes
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
       idx_name = "accounts_idx"
 
       indexes = @connection.indexes("accounts")
@@ -353,6 +354,7 @@ module ActiveRecord
     end
 
     def test_foreign_key_violations_are_translated_to_specific_exception_with_validate_false
+      skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#foreign-key") if ENV['tidb'].present?
       klass_has_fk = Class.new(ActiveRecord::Base) do
         self.table_name = "fk_test_has_fk"
       end
@@ -367,6 +369,7 @@ module ActiveRecord
     end
 
     def test_foreign_key_violations_on_insert_are_translated_to_specific_exception
+      skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#foreign-key") if ENV['tidb'].present?
       error = assert_raises(ActiveRecord::InvalidForeignKey) do
         insert_into_fk_test_has_fk
       end
@@ -375,6 +378,7 @@ module ActiveRecord
     end
 
     def test_foreign_key_violations_on_delete_are_translated_to_specific_exception
+      skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#foreign-key") if ENV['tidb'].present?
       insert_into_fk_test_has_fk fk_id: 1
 
       error = assert_raises(ActiveRecord::InvalidForeignKey) do

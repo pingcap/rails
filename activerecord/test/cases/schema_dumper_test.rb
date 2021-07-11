@@ -159,6 +159,7 @@ class SchemaDumperTest < ActiveRecord::TestCase
   end
 
   def test_schema_dumps_index_columns_in_right_order
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     index_definition = dump_table_schema("companies").split(/\n/).grep(/t\.index.*company_index/).first.strip
     if current_adapter?(:Mysql2Adapter)
       if ActiveRecord::Base.connection.supports_index_sort_order?
@@ -174,6 +175,7 @@ class SchemaDumperTest < ActiveRecord::TestCase
   end
 
   def test_schema_dumps_partial_indices
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     index_definition = dump_table_schema("companies").split(/\n/).grep(/t\.index.*company_partial_index/).first.strip
     if ActiveRecord::Base.connection.supports_partial_index?
       assert_equal 't.index ["firm_id", "type"], name: "company_partial_index", where: "(rating > 10)"', index_definition
@@ -183,6 +185,7 @@ class SchemaDumperTest < ActiveRecord::TestCase
   end
 
   def test_schema_dumps_index_sort_order
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     index_definition = dump_table_schema("companies").split(/\n/).grep(/t\.index.*_name_and_rating/).first.strip
     if ActiveRecord::Base.connection.supports_index_sort_order?
       assert_equal 't.index ["name", "rating"], name: "index_companies_on_name_and_rating", order: :desc', index_definition
@@ -192,6 +195,7 @@ class SchemaDumperTest < ActiveRecord::TestCase
   end
 
   def test_schema_dumps_index_length
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     index_definition = dump_table_schema("companies").split(/\n/).grep(/t\.index.*_name_and_description/).first.strip
     if current_adapter?(:Mysql2Adapter)
       assert_equal 't.index ["name", "description"], name: "index_companies_on_name_and_description", length: 10', index_definition
@@ -292,6 +296,7 @@ class SchemaDumperTest < ActiveRecord::TestCase
     end
 
     def test_schema_dumps_index_type
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
       output = dump_table_schema "key_tests"
       assert_match %r{t\.index \["awesome"\], name: "index_key_tests_on_awesome", type: :fulltext$}, output
       assert_match %r{t\.index \["pizza"\], name: "index_key_tests_on_pizza"$}, output
