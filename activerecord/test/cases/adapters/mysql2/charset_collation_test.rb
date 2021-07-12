@@ -11,7 +11,7 @@ class Mysql2CharsetCollationTest < ActiveRecord::Mysql2TestCase
     @connection = ActiveRecord::Base.connection
     @connection.create_table :charset_collations, id: { type: :string, collation: "utf8mb4_bin" }, force: true do |t|
       t.string :string_ascii_bin, charset: "ascii", collation: "ascii_bin"
-      t.text :text_ucs2_unicode_ci, charset: "ucs2", collation: "ucs2_unicode_ci"
+      t.text :text_ucs2_unicode_ci, charset: "ucs2", collation: "ucs2_unicode_ci" if ENV['tidb'].blank?
     end
   end
 
@@ -20,18 +20,21 @@ class Mysql2CharsetCollationTest < ActiveRecord::Mysql2TestCase
   end
 
   test "string column with charset and collation" do
+     skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/character-set-and-collation#character-sets-and-collations-supported-by-tidb") if ENV['tidb'].present?
     column = @connection.columns(:charset_collations).find { |c| c.name == "string_ascii_bin" }
     assert_equal :string, column.type
     assert_equal "ascii_bin", column.collation
   end
 
   test "text column with charset and collation" do
+     skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/character-set-and-collation#character-sets-and-collations-supported-by-tidb") if ENV['tidb'].present?
     column = @connection.columns(:charset_collations).find { |c| c.name == "text_ucs2_unicode_ci" }
     assert_equal :text, column.type
     assert_equal "ucs2_unicode_ci", column.collation
   end
 
   test "add column with charset and collation" do
+     skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/character-set-and-collation#character-sets-and-collations-supported-by-tidb") if ENV['tidb'].present?
     @connection.add_column :charset_collations, :title, :string, charset: "utf8mb4", collation: "utf8mb4_bin"
 
     column = @connection.columns(:charset_collations).find { |c| c.name == "title" }
@@ -40,6 +43,7 @@ class Mysql2CharsetCollationTest < ActiveRecord::Mysql2TestCase
   end
 
   test "change column with charset and collation" do
+     skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/character-set-and-collation#character-sets-and-collations-supported-by-tidb") if ENV['tidb'].present?
     @connection.add_column :charset_collations, :description, :string, charset: "utf8mb4", collation: "utf8mb4_unicode_ci"
     @connection.change_column :charset_collations, :description, :text, charset: "utf8mb4", collation: "utf8mb4_general_ci"
 
@@ -49,6 +53,7 @@ class Mysql2CharsetCollationTest < ActiveRecord::Mysql2TestCase
   end
 
   test "schema dump includes collation" do
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/character-set-and-collation#character-sets-and-collations-supported-by-tidb") if ENV['tidb'].present?
     output = dump_table_schema("charset_collations")
     assert_match %r/create_table "charset_collations", id: { type: :string, collation: "utf8mb4_bin" }/, output
     assert_match %r{t\.string\s+"string_ascii_bin",\s+collation: "ascii_bin"$}, output
