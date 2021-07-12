@@ -7,6 +7,7 @@ class Mysql2TableOptionsTest < ActiveRecord::Mysql2TestCase
   include SchemaDumpingHelper
   self.use_transactional_tests = false
 
+
   def setup
     @connection = ActiveRecord::Base.connection
   end
@@ -18,11 +19,13 @@ class Mysql2TableOptionsTest < ActiveRecord::Mysql2TestCase
   test "table options with ENGINE" do
     @connection.create_table "mysql_table_options", force: true, options: "ENGINE=MyISAM"
     output = dump_table_schema("mysql_table_options")
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
     expected = /create_table "mysql_table_options", charset: "utf8mb4"(?:, collation: "\w+")?, options: "ENGINE=MyISAM", force: :cascade/
     assert_match expected, output
   end
 
   test "table options with ROW_FORMAT" do
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
     @connection.create_table "mysql_table_options", force: true, options: "ROW_FORMAT=REDUNDANT"
     output = dump_table_schema("mysql_table_options")
     expected = /create_table "mysql_table_options", charset: "utf8mb4"(?:, collation: "\w+")?, options: "ENGINE=InnoDB ROW_FORMAT=REDUNDANT", force: :cascade/
@@ -30,6 +33,7 @@ class Mysql2TableOptionsTest < ActiveRecord::Mysql2TestCase
   end
 
   test "table options with CHARSET" do
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
     @connection.create_table "mysql_table_options", force: true, options: "CHARSET=latin1"
     output = dump_table_schema("mysql_table_options")
     expected = /create_table "mysql_table_options", charset: "latin1", force: :cascade/
@@ -51,6 +55,7 @@ class Mysql2TableOptionsTest < ActiveRecord::Mysql2TestCase
   end
 
   test "charset and partitioned table options" do
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
     @connection.create_table "mysql_table_options", primary_key: ["id", "account_id"], charset: "utf8mb4", collation: "utf8mb4_bin", options: "ENGINE=InnoDB\n/*!50100 PARTITION BY HASH (`account_id`)\nPARTITIONS 128 */", force: :cascade do |t|
       t.bigint "id", null: false, auto_increment: true
       t.bigint "account_id", null: false, unsigned: true
