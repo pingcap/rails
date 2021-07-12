@@ -27,6 +27,7 @@ class Mysql2ActiveSchemaTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_add_index
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     expected = "CREATE INDEX `index_people_on_last_name` ON `people` (`last_name`)"
     assert_equal expected, add_index(:people, :last_name, length: nil)
 
@@ -159,6 +160,7 @@ class Mysql2ActiveSchemaTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_remove_timestamps
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
     with_real_execute do
       ActiveRecord::Base.connection.create_table :delete_me do |t|
         t.timestamps null: true
