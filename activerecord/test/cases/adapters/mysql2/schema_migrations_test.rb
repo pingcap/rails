@@ -3,9 +3,11 @@
 require "cases/helper"
 
 class SchemaMigrationsTest < ActiveRecord::Mysql2TestCase
+
   self.use_transactional_tests = false
 
   def test_renaming_index_on_foreign_key
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
     connection.add_index "engines", "car_id"
     connection.add_foreign_key :engines, :cars, name: "fk_engines_cars"
 
