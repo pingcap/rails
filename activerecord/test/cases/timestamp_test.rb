@@ -484,6 +484,7 @@ class TimestampsWithoutTransactionTest < ActiveRecord::TestCase
   end
 
   def test_index_is_created_for_both_timestamps
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     ActiveRecord::Base.connection.create_table(:foos, force: true) do |t|
       t.timestamps null: true, index: true
     end
