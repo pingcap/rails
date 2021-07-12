@@ -210,6 +210,7 @@ class MigrationTest < ActiveRecord::TestCase
   end
 
   def test_remove_column_with_if_not_exists_not_set
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26137") if ENV['tidb'].present?
     migration_a = Class.new(ActiveRecord::Migration::Current) {
       def version; 100 end
       def migrate(x)
@@ -958,6 +959,7 @@ class MigrationTest < ActiveRecord::TestCase
 
   if ActiveRecord::Base.connection.supports_advisory_locks?
     def test_migrator_generates_valid_lock_id
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       migration = Class.new(ActiveRecord::Migration::Current).new
       migrator = ActiveRecord::Migrator.new(:up, [migration], @schema_migration, 100)
 
@@ -970,6 +972,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_generate_migrator_advisory_lock_id
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       # It is important we are consistent with how we generate this so that
       # exclusive locking works across migrator versions
       migration = Class.new(ActiveRecord::Migration::Current).new
@@ -986,6 +989,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_migrator_one_up_with_unavailable_lock
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       assert_no_column Person, :last_name
 
       migration = Class.new(ActiveRecord::Migration::Current) {
@@ -1007,6 +1011,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_migrator_one_up_with_unavailable_lock_using_run
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       assert_no_column Person, :last_name
 
       migration = Class.new(ActiveRecord::Migration::Current) {
@@ -1064,6 +1069,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_with_advisory_lock_raises_the_right_error_when_it_fails_to_release_lock
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       migration = Class.new(ActiveRecord::Migration::Current).new
       migrator = ActiveRecord::Migrator.new(:up, [migration], @schema_migration, 100)
       lock_id = migrator.send(:generate_migrator_advisory_lock_id)
@@ -1120,6 +1126,7 @@ end
 
 class ReservedWordsMigrationTest < ActiveRecord::TestCase
   def test_drop_index_from_table_named_values
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     connection = Person.connection
     connection.create_table :values, force: true do |t|
       t.integer :value
