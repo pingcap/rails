@@ -29,6 +29,7 @@ module ActiveRecord
       end
 
       def test_migration_doesnt_remove_named_index
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :foo, name: "custom_index_name"
 
         migration = Class.new(ActiveRecord::Migration[4.2]) {
@@ -44,6 +45,7 @@ module ActiveRecord
       end
 
       def test_migration_does_remove_unnamed_index
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :bar
 
         migration = Class.new(ActiveRecord::Migration[4.2]) {
@@ -290,6 +292,7 @@ module ActiveRecord
       end
 
       def test_change_table_with_polymorphic_reference_uses_all_column_names_in_index
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         migration = Class.new(ActiveRecord::Migration[6.0]) {
           def migrate(x)
             change_table :testings do |t|
@@ -306,6 +309,7 @@ module ActiveRecord
       end
 
       def test_create_join_table_with_polymorphic_reference_uses_all_column_names_in_index
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         migration = Class.new(ActiveRecord::Migration[6.0]) {
           def migrate(x)
             create_join_table :more, :testings do |t|
@@ -324,6 +328,7 @@ module ActiveRecord
       end
 
       def test_polymorphic_add_reference_uses_all_column_names_in_index
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         migration = Class.new(ActiveRecord::Migration[6.0]) {
           def migrate(x)
             add_reference :testings, :widget, polymorphic: true, index: true
@@ -719,6 +724,7 @@ module LegacyPrimaryKeyTestCases
     @migration.migrate(:down) if @migration
     ActiveRecord::Migration.verbose = @verbose_was
     ActiveRecord::SchemaMigration.delete_all rescue nil
+    ActiveRecord::Base.connection.drop_table :legacy_primary_keys, if_exists: true
     LegacyPrimaryKey.reset_column_information
   end
 
@@ -784,6 +790,7 @@ module LegacyPrimaryKeyTestCases
   end
 
   def test_legacy_primary_key_in_change_table_should_be_integer
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/10190") if ENV['tidb'].present?
     @migration = Class.new(migration_class) {
       def change
         create_table :legacy_primary_keys, id: false do |t|
@@ -801,6 +808,7 @@ module LegacyPrimaryKeyTestCases
   end
 
   def test_add_column_with_legacy_primary_key_should_be_integer
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/10190") if ENV['tidb'].present?
     @migration = Class.new(migration_class) {
       def change
         create_table :legacy_primary_keys, id: false do |t|
