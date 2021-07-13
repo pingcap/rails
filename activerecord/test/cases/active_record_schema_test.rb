@@ -168,6 +168,7 @@ class ActiveRecordSchemaTest < ActiveRecord::TestCase
 
   if ActiveRecord::Base.connection.supports_bulk_alter?
     def test_timestamps_without_null_set_null_to_false_on_change_table_with_bulk
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14766") if ENV['tidb'].present?
       ActiveRecord::Schema.define do
         create_table :has_timestamps
 
@@ -218,6 +219,7 @@ class ActiveRecordSchemaTest < ActiveRecord::TestCase
 
     if ActiveRecord::Base.connection.supports_bulk_alter?
       def test_timestamps_sets_precision_on_change_table_with_bulk
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/14766") if ENV['tidb'].present?
         ActiveRecord::Schema.define do
           create_table :has_timestamps
 
