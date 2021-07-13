@@ -6,7 +6,8 @@ require "models/comment"
 
 module ActiveRecord
   module ConnectionAdapters
-    class Mysql2SchemaTest < ActiveRecord::Mysql2TestCase
+l
+]k    class Mysql2SchemaTest < ActiveRecord::Mysql2TestCase
       fixtures :posts
 
       def setup
@@ -121,6 +122,7 @@ class Mysql2AnsiQuotesTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_foreign_keys_method_with_ansi_quotes
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
     fks = @connection.foreign_keys("lessons_students")
     assert_equal([["lessons_students", "students", :cascade]],
                  fks.map { |fk| [fk.from_table, fk.to_table, fk.on_delete] })
