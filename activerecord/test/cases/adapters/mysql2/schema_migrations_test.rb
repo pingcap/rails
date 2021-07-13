@@ -7,14 +7,14 @@ class SchemaMigrationsTest < ActiveRecord::Mysql2TestCase
   self.use_transactional_tests = false
 
   def test_renaming_index_on_foreign_key
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     connection.add_index "engines", "car_id"
     connection.add_foreign_key :engines, :cars, name: "fk_engines_cars"
 
     connection.rename_index("engines", "index_engines_on_car_id", "idx_renamed")
     assert_equal ["idx_renamed"], connection.indexes("engines").map(&:name)
   ensure
-    connection.remove_foreign_key :engines, name: "fk_engines_cars"
+    connection.remove_foreign_key :engines, name: "fk_engines_cars" rescue nil
   end
 
   def test_initializes_schema_migrations_for_encoding_utf8mb4
