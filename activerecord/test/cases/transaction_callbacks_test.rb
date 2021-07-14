@@ -239,6 +239,7 @@ class TransactionCallbacksTest < ActiveRecord::TestCase
   end
 
   def test_only_call_after_commit_on_top_level_transactions
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
     @first.after_commit_block { |r| r.history << :after_commit }
     assert_empty @first.history
 

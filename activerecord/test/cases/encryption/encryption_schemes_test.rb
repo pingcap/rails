@@ -5,6 +5,10 @@ require "models/author_encrypted"
 require "models/book"
 
 class ActiveRecord::Encryption::EncryptionSchemesTest < ActiveRecord::EncryptionTestCase
+  def teardown
+    EncryptedAuthor2.delete_all
+  end
+
   test "can decrypt encrypted_value encrypted with a different encryption scheme" do
     ActiveRecord::Encryption.config.support_unencrypted_data = false
 
