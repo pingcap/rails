@@ -15,4 +15,8 @@ ActiveRecord::ConnectionAdapters::Mysql2Adapter.class_eval do
   def supports_advisory_locks?
     false
   end
+
+  def supports_optimizer_hints?
+    false
+  end
 end
