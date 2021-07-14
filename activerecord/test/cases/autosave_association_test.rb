@@ -1079,7 +1079,7 @@ class TestDestroyAsPartOfAutosaveAssociation < ActiveRecord::TestCase
 
     assert_equal 3, @pirate.birds.reload.length
   ensure
-    Bird.connection.remove_index :birds, column: :name
+    Bird.connection.remove_index :birds, column: :name rescue nil
   end
 
   # Add and remove callbacks tests for association collections.

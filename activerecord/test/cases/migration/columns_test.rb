@@ -302,6 +302,7 @@ module ActiveRecord
       end
 
       def test_column_with_index
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_table "my_table", force: true do |t|
           t.string :item_number, index: true
         end

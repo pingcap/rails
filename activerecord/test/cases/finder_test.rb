@@ -27,6 +27,9 @@ require "support/stubs/strong_parameters"
 
 class FinderTest < ActiveRecord::TestCase
   fixtures :companies, :topics, :entrants, :developers, :developers_projects, :posts, :comments, :accounts, :authors, :author_addresses, :customers, :categories, :categorizations, :cars
+  def teardown
+    Subscriber.delete_all
+  end
 
   def test_find_by_id_with_hash
     assert_nothing_raised do

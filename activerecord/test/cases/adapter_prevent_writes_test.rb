@@ -13,6 +13,10 @@ module ActiveRecord
       @connection = ActiveRecord::Base.connection
     end
 
+    def teardown
+      @connection.execute("DELETE FROM subscribers")
+    end
+
     def test_preventing_writes_predicate
       assert_not_predicate @connection, :preventing_writes?
 
@@ -165,6 +169,7 @@ module ActiveRecord
     def teardown
       clean_up_legacy_connection_handlers
       ActiveRecord::Base.legacy_connection_handling = @old_value
+      @connection.execute("DELETE FROM subscribers")
     end
 
     def test_preventing_writes_predicate_legacy
