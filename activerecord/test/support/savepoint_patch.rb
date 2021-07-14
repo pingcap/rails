@@ -3,4 +3,16 @@ ActiveRecord::ConnectionAdapters::Mysql2Adapter.class_eval do
   def supports_savepoints?
     false
   end
+
+  def supports_foreign_keys?
+    false
+  end
+
+  def supports_bulk_alter?
+    false
+  end
+
+  def supports_advisory_locks?
+    false
+  end
 end
