@@ -397,6 +397,15 @@ end
 class PreloaderTest < ActiveRecord::TestCase
   fixtures :posts, :comments, :books, :authors, :tags, :taggings, :essays, :categories, :author_addresses
 
+  def teardown
+    Post.delete_all
+    Comment.delete_all
+    Author.delete_all
+    Book.delete_all
+    Tag.destroy_all
+    Tagging.delete_all
+  end
+
   def test_preload_with_scope
     post = posts(:welcome)
 
