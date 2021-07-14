@@ -15,7 +15,7 @@ unless ActiveRecord::Base.connection.supports_transaction_isolation? && !current
       end
     end
   end
-else
+else 
   class TransactionIsolationTest < ActiveRecord::TestCase
     self.use_transactional_tests = false
 
@@ -81,9 +81,11 @@ else
     # We are only testing that there are no errors because it's too hard to
     # test serializable. Databases behave differently to enforce the serializability
     # constraint.
-    test "serializable" do
-      Tag.transaction(isolation: :serializable) do
-        Tag.create
+    if ActiveRecord::Base.connection.transaction_isolation_levels.include?(:serializable)
+      test "serializable" do
+        Tag.transaction(isolation: :serializable) do
+          Tag.create
+        end
       end
     end
 

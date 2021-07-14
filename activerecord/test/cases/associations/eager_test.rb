@@ -49,6 +49,12 @@ class EagerAssociationTest < ActiveRecord::TestCase
             :owners, :pets, :author_favorites, :jobs, :references, :subscribers, :subscriptions, :books,
             :developers, :projects, :developers_projects, :members, :memberships, :clubs, :sponsors
 
+  def teardown
+    Comment.delete_all
+    Post.delete_all
+    Member.delete_all
+  end
+
   def test_eager_with_has_one_through_join_model_with_conditions_on_the_through
     member = Member.all.merge!(includes: :favorite_club).find(members(:some_other_guy).id)
     assert_nil member.favorite_club
