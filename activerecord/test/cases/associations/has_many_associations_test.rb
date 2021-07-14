@@ -122,6 +122,13 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     Client.destroyed_client_ids.clear
   end
 
+  def teardown
+    Speedometer.delete_all
+    Firm.delete_all
+    Contract.delete_all
+    Minivan.delete_all
+  end
+
   def test_sti_subselect_count
     tag = Tag.first
     len = Post.tagged_with(tag.id).limit(10).size

@@ -5,6 +5,10 @@ require "models/book_encrypted"
 require "models/author_encrypted"
 
 class ActiveRecord::Encryption::UniquenessValidationsTest < ActiveRecord::EncryptionTestCase
+  def teardown
+    EncryptedBookWithDowncaseName.delete_all
+  end
+
   test "uniqueness validations work" do
     EncryptedBookWithDowncaseName.create!(name: "dune")
     assert_raises ActiveRecord::RecordInvalid do
