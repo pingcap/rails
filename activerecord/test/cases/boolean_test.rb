@@ -4,6 +4,10 @@ require "cases/helper"
 require "models/boolean"
 
 class BooleanTest < ActiveRecord::TestCase
+  def teardown
+    Boolean.delete_all
+  end
+
   def test_boolean
     b_nil   = Boolean.create!(value: nil)
     b_false = Boolean.create!(value: false)

@@ -71,6 +71,7 @@ module ActiveRecord
       end
 
       def test_dump_indexes
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         index_a_name = "index_key_tests_on_snack"
         index_b_name = "index_key_tests_on_pizza"
         index_c_name = "index_key_tests_on_awesome"
