@@ -33,6 +33,7 @@ class RelationTest < ActiveRecord::TestCase
   def teardown
     Bird.delete_all
     Subscriber.delete_all
+    Author.delete_all
   end
 
   def test_do_not_double_quote_string_id
