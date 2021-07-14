@@ -186,12 +186,15 @@ class PrimaryKeysTest < ActiveRecord::TestCase
   end
 
   def test_primary_key_update_with_custom_key_name
+
     dashboard = Dashboard.create!(dashboard_id: "1")
     dashboard.id = "2"
     dashboard.save!
 
     dashboard = Dashboard.first
     assert_equal "2", dashboard.id
+  ensure
+    dashboard.destroy
   end
 
   def test_create_without_primary_key_no_extra_query
@@ -202,6 +205,8 @@ class PrimaryKeysTest < ActiveRecord::TestCase
     end
     klass.create! # warmup schema cache
     assert_queries(3, ignore_none: true) { klass.create! }
+  ensure
+    Dashboard.delete_all
   end
 
   def test_assign_id_raises_error_if_primary_key_doesnt_exist
@@ -210,6 +215,8 @@ class PrimaryKeysTest < ActiveRecord::TestCase
     end
     dashboard = klass.new
     assert_raises(ActiveModel::MissingAttributeError) { dashboard.id = "1" }
+  ensure
+    Dashboard.delete_all
   end
 
   if current_adapter?(:PostgreSQLAdapter)
