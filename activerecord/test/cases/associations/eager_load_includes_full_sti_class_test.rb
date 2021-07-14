@@ -21,6 +21,8 @@ module FullStiClassNamesSharedTest
   end
 
   def teardown
+    Tagging.delete_all
+    Post.delete_all
     ActiveRecord::Base.store_full_sti_class = @old_store_full_sti_class
   end
 
@@ -93,6 +95,8 @@ module PolymorphicFullClassNamesSharedTest
   end
 
   def teardown
+    Namespaced::Post.delete_all
+    Tagging.delete_all
     ActiveRecord::Base.store_full_class_name = @old_store_full_class_name
   end
 

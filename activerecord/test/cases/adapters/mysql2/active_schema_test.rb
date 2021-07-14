@@ -98,6 +98,7 @@ class Mysql2ActiveSchemaTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_index_in_bulk_change
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/6347") if ENV['tidb'].present?
     %w(SPATIAL FULLTEXT UNIQUE).each do |type|
       expected = "ALTER TABLE `people` ADD #{type} INDEX `index_people_on_last_name` (`last_name`)"
       assert_sql(expected) do
