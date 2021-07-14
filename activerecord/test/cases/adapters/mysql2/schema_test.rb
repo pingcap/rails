@@ -6,8 +6,7 @@ require "models/comment"
 
 module ActiveRecord
   module ConnectionAdapters
-l
-]k    class Mysql2SchemaTest < ActiveRecord::Mysql2TestCase
+    class Mysql2SchemaTest < ActiveRecord::Mysql2TestCase
       fixtures :posts
 
       def setup
