@@ -14,6 +14,12 @@ module ActiveRecord
       @connection.materialize_transactions
     end
 
+    def teardown
+      Book.delete_all
+      Event.delete_all
+      Post.delete_all
+    end
+
     ##
     # PostgreSQL does not support null bytes in strings
     unless current_adapter?(:PostgreSQLAdapter) ||
@@ -123,6 +129,8 @@ module ActiveRecord
     def test_exec_query_returns_an_empty_result
       result = @connection.exec_query "INSERT INTO subscribers(nick) VALUES('me')"
       assert_instance_of(ActiveRecord::Result, result)
+    ensure
+      @connection.execute("DELETE FROM subscribers")
     end
 
     if current_adapter?(:Mysql2Adapter)

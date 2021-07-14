@@ -4,6 +4,10 @@ require "cases/helper"
 require "models/numeric_data"
 
 class NumericDataTest < ActiveRecord::TestCase
+  def teardown
+    NumericData.delete_all
+  end
+  
   def test_big_decimal_conditions
     m = NumericData.new(
       bank_balance: 1586.43,
