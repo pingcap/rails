@@ -106,6 +106,7 @@ class BasePreventWritesTest < ActiveRecord::TestCase
     def teardown
       clean_up_legacy_connection_handlers
       ActiveRecord.legacy_connection_handling = @old_value
+      Bird.delete_all
     end
 
     if !in_memory_db?

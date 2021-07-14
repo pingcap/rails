@@ -19,4 +19,11 @@ ActiveRecord::ConnectionAdapters::Mysql2Adapter.class_eval do
   def supports_optimizer_hints?
     false
   end
+
+  def transaction_isolation_levels
+    {
+      read_committed:   "READ COMMITTED",
+      repeatable_read:  "REPEATABLE READ"
+    }
+  end
 end
