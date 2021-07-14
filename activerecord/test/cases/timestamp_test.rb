@@ -496,6 +496,6 @@ class TimestampsWithoutTransactionTest < ActiveRecord::TestCase
     indexes = ActiveRecord::Base.connection.indexes("foos")
     assert_equal ["created_at", "updated_at"], indexes.flat_map(&:columns).sort
   ensure
-    ActiveRecord::Base.connection.drop_table(:foos)
+    ActiveRecord::Base.connection.drop_table(:foos) rescue nil
   end
 end
