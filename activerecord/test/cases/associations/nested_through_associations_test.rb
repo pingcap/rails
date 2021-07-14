@@ -36,6 +36,10 @@ class NestedThroughAssociationsTest < ActiveRecord::TestCase
            :member_types, :sponsors, :clubs, :organizations, :categories, :categories_posts,
            :categorizations, :memberships, :essays
 
+  def teardown
+    Hotel.delete_all
+  end
+
   # Through associations can either use the has_many or has_one macros.
   #
   # has_many

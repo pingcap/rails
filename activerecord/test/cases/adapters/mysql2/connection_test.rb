@@ -29,6 +29,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
     end
   end
 
+
   def test_no_automatic_reconnection_after_timeout
     assert_predicate @connection, :active?
     @connection.update("set @@wait_timeout=1")
@@ -93,7 +94,25 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
     end
   end
 
-  def test_mysql_connection_collation_is_configured
+  def test_character_set_connection_is_configured
+    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/character-set-and-collation#character-set-and-collation") if ENV['tidb'].present?
+    run_without_connection do |orig_connection|
+      configuration_hash = orig_connection.except(:encoding, :collation)
+      ActiveRecord::Base.establish_connection(configuration_hash.merge!(encoding: "cp932"))
+      connection = ActiveRecord::Base.connection
+
+      assert_equal "cp932", connection.show_variable("character_set_client")
+      assert_equal "cp932", connection.show_variable("character_set_results")
+      assert_equal "cp932", connection.show_variable("character_set_connection")
+      assert_equal "cp932_japanese_ci", connection.show_variable("collation_connection")
+
+      expected = "こんにちは".encode(Encoding::CP932)
+      assert_equal expected, connection.query_value("SELECT 'こんにちは'")
+    end
+  end
+
+  def test_collation_connection_is_configured
+    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/character-set-and-collation#character-set-and-collation") if ENV['tidb'].present?
     assert_equal "utf8mb4_unicode_ci", @connection.show_variable("collation_connection")
     assert_equal "utf8mb4_general_ci", ARUnit2Model.connection.show_variable("collation_connection")
   end
@@ -180,6 +199,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_get_and_release_advisory_lock
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
     lock_name = "test lock'n'name"
 
     got_lock = @connection.get_advisory_lock(lock_name)
@@ -195,6 +215,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_release_non_existent_advisory_lock
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
     lock_name = "fake lock'n'name"
     released_non_existent_lock = @connection.release_advisory_lock(lock_name)
     assert_equal released_non_existent_lock, false,
