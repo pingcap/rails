@@ -125,6 +125,7 @@ class FixturesTest < ActiveRecord::TestCase
     end
 
     def test_bulk_insert_with_a_multi_statement_query_in_a_nested_transaction
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
       fixtures = {
         "traffic_lights" => [
           { "location" => "US", "state" => ["NY"], "long_state" => ["a"] },
@@ -144,6 +145,7 @@ class FixturesTest < ActiveRecord::TestCase
 
   if current_adapter?(:Mysql2Adapter)
     def test_bulk_insert_with_multi_statements_enabled
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
       run_without_connection do |orig_connection|
         ActiveRecord::Base.establish_connection(
           orig_connection.merge(flags: %w[MULTI_STATEMENTS])
@@ -717,19 +719,21 @@ class FixturesWithoutInstanceInstantiationTest < ActiveRecord::TestCase
   end
 end
 
-class TransactionalFixturesTest < ActiveRecord::TestCase
-  self.use_instantiated_fixtures = true
-  self.use_transactional_tests = true
+if ENV['tidb'].blank?
+  class TransactionalFixturesTest < ActiveRecord::TestCase
+    self.use_instantiated_fixtures = true
+    self.use_transactional_tests = true
 
-  fixtures :topics
+    fixtures :topics
 
-  def test_destroy
-    assert_not_nil @first
-    @first.destroy
-  end
+    def test_destroy
+      assert_not_nil @first
+      @first.destroy
+    end
 
-  def test_destroy_just_kidding
-    assert_not_nil @first
+    def test_destroy_just_kidding
+      assert_not_nil @first
+    end
   end
 end
 
@@ -962,96 +966,100 @@ class CustomConnectionFixturesTest < ActiveRecord::TestCase
   end
 end
 
-class TransactionalFixturesOnCustomConnectionTest < ActiveRecord::TestCase
-  set_fixture_class courses: Course
-  fixtures :courses
-  self.use_transactional_tests = true
+if ENV['tidb'].blank?
+  class TransactionalFixturesOnCustomConnectionTest < ActiveRecord::TestCase
+    set_fixture_class courses: Course
+    fixtures :courses
+    self.use_transactional_tests = true
 
-  def test_leaky_destroy
-    assert_nothing_raised { courses(:ruby) }
-    courses(:ruby).destroy
-  end
+    def test_leaky_destroy
+      assert_nothing_raised { courses(:ruby) }
+      courses(:ruby).destroy
+    end
 
-  def test_it_twice_in_whatever_order_to_check_for_fixture_leakage
-    test_leaky_destroy
+    def test_it_twice_in_whatever_order_to_check_for_fixture_leakage
+      test_leaky_destroy
+    end
   end
 end
 
-class TransactionalFixturesOnConnectionNotification < ActiveRecord::TestCase
-  self.use_transactional_tests = true
-  self.use_instantiated_fixtures = false
+if ENV['tidb'].blank?
+  class TransactionalFixturesOnConnectionNotification < ActiveRecord::TestCase
+    self.use_transactional_tests = true
+    self.use_instantiated_fixtures = false
 
-  def test_transaction_created_on_connection_notification
-    connection = Class.new do
-      attr_accessor :pool
+    def test_transaction_created_on_connection_notification
+      connection = Class.new do
+        attr_accessor :pool
 
-      def transaction_open?; end
-      def begin_transaction(*args); end
-      def rollback_transaction(*args); end
-    end.new
+        def transaction_open?; end
+        def begin_transaction(*args); end
+        def rollback_transaction(*args); end
+      end.new
 
-    connection.pool = Class.new do
-      def lock_thread=(lock_thread); end
-    end.new
+      connection.pool = Class.new do
+        def lock_thread=(lock_thread); end
+      end.new
 
-    assert_called_with(connection, :begin_transaction, [joinable: false, _lazy: false]) do
+      assert_called_with(connection, :begin_transaction, [joinable: false, _lazy: false]) do
+        fire_connection_notification(connection)
+      end
+    end
+
+    def test_notification_established_transactions_are_rolled_back
+      connection = Class.new do
+        attr_accessor :rollback_transaction_called
+        attr_accessor :pool
+
+        def transaction_open?; true; end
+        def begin_transaction(*args); end
+        def rollback_transaction(*args)
+          @rollback_transaction_called = true
+        end
+      end.new
+
+      connection.pool = Class.new do
+        def lock_thread=(lock_thread); end
+      end.new
+
       fire_connection_notification(connection)
+      teardown_fixtures
+
+      assert(connection.rollback_transaction_called, "Expected <mock connection>#rollback_transaction to be called but was not")
     end
-  end
 
-  def test_notification_established_transactions_are_rolled_back
-    connection = Class.new do
-      attr_accessor :rollback_transaction_called
-      attr_accessor :pool
+    def test_transaction_created_on_connection_notification_for_shard
+      connection = Class.new do
+        attr_accessor :pool
 
-      def transaction_open?; true; end
-      def begin_transaction(*args); end
-      def rollback_transaction(*args)
-        @rollback_transaction_called = true
-      end
-    end.new
+        def transaction_open?; end
+        def begin_transaction(*args); end
+        def rollback_transaction(*args); end
+      end.new
 
-    connection.pool = Class.new do
-      def lock_thread=(lock_thread); end
-    end.new
+      connection.pool = Class.new do
+        def lock_thread=(lock_thread); end
+      end.new
 
-    fire_connection_notification(connection)
-    teardown_fixtures
-
-    assert(connection.rollback_transaction_called, "Expected <mock connection>#rollback_transaction to be called but was not")
-  end
-
-  def test_transaction_created_on_connection_notification_for_shard
-    connection = Class.new do
-      attr_accessor :pool
-
-      def transaction_open?; end
-      def begin_transaction(*args); end
-      def rollback_transaction(*args); end
-    end.new
-
-    connection.pool = Class.new do
-      def lock_thread=(lock_thread); end
-    end.new
-
-    assert_called_with(connection, :begin_transaction, [joinable: false, _lazy: false]) do
-      fire_connection_notification(connection, shard: :shard_two)
-    end
-  end
-
-  private
-    def fire_connection_notification(connection, shard: ActiveRecord::Base.default_shard)
-      assert_called_with(ActiveRecord::Base.connection_handler, :retrieve_connection, ["book", { shard: shard }], returns: connection) do
-        message_bus = ActiveSupport::Notifications.instrumenter
-        payload = {
-          spec_name: "book",
-          shard: shard,
-          config: nil,
-        }
-
-        message_bus.instrument("!connection.active_record", payload) { }
+      assert_called_with(connection, :begin_transaction, [joinable: false, _lazy: false]) do
+        fire_connection_notification(connection, shard: :shard_two)
       end
     end
+
+    private
+      def fire_connection_notification(connection, shard: ActiveRecord::Base.default_shard)
+        assert_called_with(ActiveRecord::Base.connection_handler, :retrieve_connection, ["book", { shard: shard }], returns: connection) do
+          message_bus = ActiveSupport::Notifications.instrumenter
+          payload = {
+            spec_name: "book",
+            shard: shard,
+            config: nil,
+          }
+
+          message_bus.instrument("!connection.active_record", payload) { }
+        end
+      end
+  end
 end
 
 class InvalidTableNameFixturesTest < ActiveRecord::TestCase
