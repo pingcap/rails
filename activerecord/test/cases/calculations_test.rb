@@ -25,6 +25,12 @@ require "support/stubs/strong_parameters"
 
 class CalculationsTest < ActiveRecord::TestCase
   fixtures :companies, :accounts, :authors, :author_addresses, :topics, :speedometers, :minivans, :books, :posts, :comments
+  
+  def teardown
+    Company.delete_all
+    NumericData.delete_all
+    ShipPart.delete_all
+  end
 
   def test_should_sum_field
     assert_equal 318, Account.sum(:credit_limit)
