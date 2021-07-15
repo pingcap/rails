@@ -95,6 +95,7 @@ module ActiveRecord
 
       unless mysql_enforcing_gtid_consistency?
         def test_drop_temporary_table
+          skip("TiDB issue: https://github.com/pingcap/tidb/issues/26278") if ENV['tidb'].present?
           @connection.transaction do
             @connection.create_table(:temp_table, temporary: true)
             # if it doesn't properly say DROP TEMPORARY TABLE, the transaction commit
