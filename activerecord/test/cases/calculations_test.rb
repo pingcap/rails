@@ -29,6 +29,8 @@ class CalculationsTest < ActiveRecord::TestCase
     Company.delete_all
     NumericData.delete_all
     ShipPart.delete_all
+    Developer.delete_all
+    Contract.delete_all
   end
 
   def test_should_sum_field
