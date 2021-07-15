@@ -127,6 +127,12 @@ end
 class HasAndBelongsToManyAssociationsTest < ActiveRecord::TestCase
   fixtures :accounts, :companies, :categories, :posts, :categories_posts, :developers, :projects, :developers_projects,
            :parrots, :pirates, :parrots_pirates, :treasures, :price_estimates, :tags, :taggings, :computers
+  
+  def teardown
+    Country.delete_all
+    Treaty.delete_all
+    ActiveRecord::Base.connection.execute("delete from countries_treaties")
+  end
 
   def setup_data_for_habtm_case
     ActiveRecord::Base.connection.execute("delete from countries_treaties")
