@@ -18,6 +18,7 @@ module ActiveRecord
       Book.delete_all
       Event.delete_all
       Post.delete_all
+      @connection.execute("DELETE FROM subscribers") rescue nil
     end
 
     ##
