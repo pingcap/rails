@@ -8,6 +8,11 @@ class ActiveRecord::Encryption::ExtendedDeterministicQueriesTest < ActiveRecord:
     ActiveRecord::Encryption.config.support_unencrypted_data = true
   end
 
+  def teardown
+    EncryptedBook.delete_all
+    EncryptedBookWithDowncaseName.delete_all
+  end
+
   test "Finds records when data is unencrypted" do
     ActiveRecord::Encryption.without_encryption { UnencryptedBook.create! name: "Dune" }
     assert EncryptedBook.find_by(name: "Dune") # core

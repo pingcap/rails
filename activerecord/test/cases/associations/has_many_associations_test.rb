@@ -127,6 +127,8 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     Firm.delete_all
     Contract.delete_all
     Minivan.delete_all
+    Car.delete_all
+    Engine.delete_all
   end
 
   def test_sti_subselect_count
