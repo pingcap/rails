@@ -1415,9 +1415,9 @@ class EagerAssociationTest < ActiveRecord::TestCase
     comments = Post.find(1).comments.to_a
 
     Comment.where("1=0").scoping do
-      assert_equal comments, Post.find(1).comments
-      assert_equal comments, Post.preload(:comments).find(1).comments
-      assert_equal comments, Post.eager_load(:comments).find(1).comments
+      assert_equal comments, Post.find(1).comments.to_a
+      assert_equal comments, Post.preload(:comments).find(1).comments.to_a
+      assert_equal comments, Post.eager_load(:comments).find(1).comments.to_a
     end
   end
 
