@@ -902,6 +902,7 @@ class HasManyThroughAssociationsTest < ActiveRecord::TestCase
   end
 
   def test_has_many_association_through_a_belongs_to_association
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14198") if ENV['tidb'].present?
     author = authors(:mary)
     post = Post.create!(author: author, title: "TITLE", body: "BODY")
     author.author_favorites.create(favorite_author_id: 1)
