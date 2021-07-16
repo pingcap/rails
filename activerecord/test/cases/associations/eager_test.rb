@@ -1412,6 +1412,7 @@ class EagerAssociationTest < ActiveRecord::TestCase
   end
 
   test "has_many association ignores the scoping" do
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14198") if ENV['tidb'].present?
     comments = Post.find(1).comments.to_a
 
     Comment.where("1=0").scoping do

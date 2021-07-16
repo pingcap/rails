@@ -189,8 +189,8 @@ namespace :db do
     desc "Build the MySQL test databases"
     task :build do
       config = ARTest.config["connections"]["mysql2"]
-      %x( mysql #{connection_arguments["arunit"]} -e "create DATABASE #{config["arunit"]["database"]} DEFAULT CHARACTER SET utf8mb4" )
-      %x( mysql #{connection_arguments["arunit2"]} -e "create DATABASE #{config["arunit2"]["database"]} DEFAULT CHARACTER SET utf8mb4" )
+      %x( mysql #{connection_arguments["arunit"]} -e "create DATABASE #{config["arunit"]["database"]} DEFAULT CHARACTER SET utf8mb4 COLLATE #{config["arunit"]["collation"]}" )
+      %x( mysql #{connection_arguments["arunit2"]} -e "create DATABASE #{config["arunit2"]["database"]} DEFAULT CHARACTER SET utf8mb4 COLLATE #{config["arunit2"]["collation"]}" )
     end
 
     desc "Drop the MySQL test databases"
