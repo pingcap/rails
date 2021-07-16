@@ -398,7 +398,6 @@ class PreloaderTest < ActiveRecord::TestCase
   fixtures :posts, :comments, :books, :authors, :tags, :taggings, :essays, :categories, :author_addresses
 
   def teardown
-    Post.delete_all
     Comment.delete_all
     Author.delete_all
     Book.delete_all
@@ -518,6 +517,7 @@ class PreloaderTest < ActiveRecord::TestCase
     assert_predicate bob.posts_mentioning_author, :loaded?
 
     assert_equal [post, post2].sort, david.posts_mentioning_author.sort
+
     assert_equal [], david2.posts_mentioning_author
     assert_equal [], bob.posts_mentioning_author
   end
@@ -538,7 +538,7 @@ class PreloaderTest < ActiveRecord::TestCase
     assert_predicate david2.comments_mentioning_author, :loaded?
     assert_predicate bob.comments_mentioning_author, :loaded?
 
-    assert_equal [comment1, comment2].sort, david.comments_mentioning_author.sort
+    assert_equal [comment1, comment2].sort, david.comments_mentioning_author.reload.sort
     assert_equal [], david2.comments_mentioning_author
     assert_equal [], bob.comments_mentioning_author
   end
