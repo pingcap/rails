@@ -41,5 +41,7 @@ class ActiveRecord::Encryption::UniquenessValidationsTest < ActiveRecord::Encryp
     assert_raises ActiveRecord::RecordInvalid do
       OldEncryptionBook.create! name: "DUNE"
     end
+  ensure
+    OldEncryptionBook.delete_all
   end
 end
