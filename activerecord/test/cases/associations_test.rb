@@ -729,7 +729,6 @@ class PreloaderTest < ActiveRecord::TestCase
       postesque.author
     end
   end
->>>>>>> 8883c40e73 ([tidb] fix collation issue)
 end
 
 class GeneratedMethodsTest < ActiveRecord::TestCase
