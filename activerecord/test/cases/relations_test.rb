@@ -1714,6 +1714,26 @@ class RelationTest < ActiveRecord::TestCase
     assert_not_predicate scope, :eager_loading?
   end
 
+  def test_order_triggers_eager_loading
+    scope = Post.includes(:comments).order("comments.label ASC")
+    assert_predicate scope, :eager_loading?
+  end
+
+  def test_order_doesnt_trigger_eager_loading_when_ordering_using_the_owner_table
+    scope = Post.includes(:comments).order("posts.title ASC")
+    assert_not_predicate scope, :eager_loading?
+  end
+
+  def test_order_triggers_eager_loading_when_ordering_using_hash_syntax
+    scope = Post.includes(:comments).order({ "comments.label": :ASC })
+    assert_predicate scope, :eager_loading?
+  end
+
+  def test_order_doesnt_trigger_eager_loading_when_ordering_using_the_owner_table_and_hash_syntax
+    scope = Post.includes(:comments).order({ "posts.title": :ASC })
+    assert_not_predicate scope, :eager_loading?
+  end
+
   def test_automatically_added_where_references
     scope = Post.where(comments: { body: "Bla" })
     assert_equal ["comments"], scope.references_values
@@ -1857,22 +1877,8 @@ class RelationTest < ActiveRecord::TestCase
 
     assert_difference("Post.count", -3) { david.posts.destroy_by(body: "hello") }
 
-    assert_difference("Author.count", -1) do
-      Author.destroy_by(id: david.id)
-    end
-  end
-
-  def test_destroy_all_deprecated_return_value
-    ActiveRecord::Base.destroy_all_in_batches = false
-    david = authors(:david)
-
-    assert_deprecated do
-      assert_difference("Author.count", -1) do
-        assert_equal [david], Author.where(id: david.id).destroy_all
-      end
-    end
-  ensure
-    ActiveRecord::Base.destroy_all_in_batches = true
+    destroyed = Author.destroy_by(id: david.id)
+    assert_equal [david], destroyed
   end
 
   test "find_by with hash conditions returns the first matching record" do

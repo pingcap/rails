@@ -1,3 +1,51 @@
+*   Fix `eager_loading?` when ordering with `Hash` syntax
+
+    `eager_loading?` is triggered correctly when using `order` with hash syntax
+    on an outer table.
+
+    ```ruby
+    Post.includes(:comments).order({ "comments.label": :ASC }).eager_loading?
+    => true
+    ```
+
+    *Jacopo Beschi*
+
+*   Move the forcing of clear text encoding to the `ActiveRecord::Encryption::Encryptor`.
+
+    Fixes #42699.
+
+    *J Smith*
+
+*   `partial_inserts` is now disabled by default in new apps.
+
+    This will be the default for new apps in Rails 7. To opt in:
+
+    ```ruby
+    config.active_record.partial_inserts = false
+    ```
+
+    If a migration remove the default value of a column, this option
+    would cause old processes to no longer be able to create new records.
+
+    If you need to remove a column, you should first use `ignored_columns`
+    to stop using it.
+
+    *Jean Boussier*
+
+*   Rails can now verify foreign keys after loading fixtures in tests.
+
+    This will be the default for new apps in Rails 7. To opt in:
+
+    ```ruby
+    config.active_record.verify_foreign_keys_for_fixtures = true
+    ```
+
+    Tests will not run if there is a foreign key constraint violation in your fixture data.
+
+    The feature is supported by SQLite and PostgreSQL, other adapters can also add support for it.
+
+    *Alex Ghiculescu*
+
 *   Clear cached `has_one` association after setting `belongs_to` association to `nil`.
 
     After setting a `belongs_to` relation to `nil` and updating an unrelated attribute on the owner,
@@ -10,24 +58,6 @@
 *   OpenSSL constants are now used for Digest computations.
 
     *Dirkjan Bussink*
-
-*   Relation#destroy_all perform its work in batches
-
-    Since destroy_all actually loads the entire relation and then iteratively destroys the records one by one,
-    you can blow your memory gasket very easily. So let's do the right thing by default
-    and do this work in batches of 100 by default and allow you to specify
-    the batch size like so: #destroy_all(batch_size: 100).
-
-    Apps upgrading to 7.0 will get a deprecation warning. As of Rails 7.1, destroy_all will no longer
-    return the collection of records that were destroyed.
-
-    To transition to the new behaviour set the following in an initializer:
-
-    ```ruby
-    config.active_record.destroy_all_in_batches = true
-    ```
-
-    *Genadi Samokovarov*, *Roberto Miranda*
 
 *   Adds support for `if_not_exists` to `add_foreign_key` and `if_exists` to `remove_foreign_key`.
 
@@ -88,9 +118,9 @@
 
     *Jorge Manrubia*
 
-*   The MySQL adapter now cast numbers and booleans bind parameters to to string for safety reasons.
+*   The MySQL adapter now cast numbers and booleans bind parameters to string for safety reasons.
 
-    When comparing a string and a number in a query, MySQL convert the string to a number. So for
+    When comparing a string and a number in a query, MySQL converts the string to a number. So for
     instance `"foo" = 0`, will implicitly cast `"foo"` to `0` and will evaluate to `TRUE` which can
     lead to security vulnerabilities.
 

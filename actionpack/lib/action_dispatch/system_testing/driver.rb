@@ -5,14 +5,16 @@ module ActionDispatch
     class Driver # :nodoc:
       def initialize(name, **options, &capabilities)
         @name = name
-        @browser = Browser.new(options[:using])
         @screen_size = options[:screen_size]
         @options = options[:options] || {}
         @capabilities = capabilities
 
         if name == :selenium
           require "selenium/webdriver"
+          @browser = Browser.new(options[:using])
           @browser.preload
+        else
+          @browser = nil
         end
       end
 
@@ -28,7 +30,7 @@ module ActionDispatch
         end
 
         def register
-          @browser.configure(&@capabilities)
+          @browser&.configure(&@capabilities)
 
           Capybara.register_driver @name do |app|
             case @name
