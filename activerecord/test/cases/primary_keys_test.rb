@@ -14,6 +14,10 @@ require "models/non_primary_key"
 class PrimaryKeysTest < ActiveRecord::TestCase
   fixtures :topics, :subscribers, :movies, :mixed_case_monkeys
 
+  def teardown
+    Dashboard.delete_all
+  end
+
   def test_to_key_with_default_primary_key
     topic = Topic.new
     assert_nil topic.to_key
@@ -185,6 +189,7 @@ class PrimaryKeysTest < ActiveRecord::TestCase
   end
 
   def test_primary_key_update_with_custom_key_name
+
     dashboard = Dashboard.create!(dashboard_id: "1")
     dashboard.id = "2"
     dashboard.save!
