@@ -792,6 +792,7 @@ class MigrationTest < ActiveRecord::TestCase
 
   unless mysql_enforcing_gtid_consistency?
     def test_create_table_with_query
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/4754") if ENV['tidb'].present?
       Person.connection.create_table :table_from_query_testings, as: "SELECT id FROM people WHERE id = 1"
 
       columns = Person.connection.columns(:table_from_query_testings)
@@ -803,6 +804,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_create_table_with_query_from_relation
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/4754") if ENV['tidb'].present?
       Person.connection.create_table :table_from_query_testings, as: Person.select(:id).where(id: 1)
 
       columns = Person.connection.columns(:table_from_query_testings)
