@@ -105,6 +105,7 @@ module ActiveRecord
       end
 
       def test_rename_column_with_multi_column_index
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         add_column "test_models", :hat_size, :integer
         add_column "test_models", :hat_style, :string, limit: 100
         add_index "test_models", ["hat_style", "hat_size"], unique: true

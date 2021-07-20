@@ -1083,6 +1083,7 @@ end
 
 class ExplicitlyNamedIndexMigrationTest < ActiveRecord::TestCase
   def test_drop_index_by_name
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     connection = Person.connection
     connection.create_table :values, force: true do |t|
       t.integer :value
