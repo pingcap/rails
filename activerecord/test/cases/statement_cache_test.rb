@@ -17,6 +17,7 @@ module ActiveRecord
       Book.delete_all
       Liquid.delete_all
       Molecule.delete_all
+      @connection.execute("DELETE FROM birds")
     end
 
     def test_statement_cache
