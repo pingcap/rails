@@ -9,6 +9,8 @@ class ActiveRecord::Encryption::ContextsTest < ActiveRecord::EncryptionTestCase
 
   def teardown
     EncryptedBook.delete_all
+    EncryptedPost.delete_all
+    EncryptedAuthor.delete_all
   end
 
   setup do
