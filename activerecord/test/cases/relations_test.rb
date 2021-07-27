@@ -35,6 +35,7 @@ class RelationTest < ActiveRecord::TestCase
     Subscriber.delete_all
     Author.delete_all
     Possession.delete_all
+    Company.connection.execute("DELETE FROM companies")
   end
 
   def test_do_not_double_quote_string_id
