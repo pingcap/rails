@@ -51,6 +51,7 @@ connections:
       variables:
           tidb_enable_noop_functions: ON
           tidb_skip_isolation_level_check: 1
+<% end %>
 <% if ENV['MYSQL_SOCK'] %>
       socket: "<%= ENV['MYSQL_SOCK'] %>"
 <% end %>
@@ -69,6 +70,7 @@ connections:
       variables:
           tidb_enable_noop_functions: ON
           tidb_skip_isolation_level_check: 1
+<% end %>
 <% if ENV['MYSQL_SOCK'] %>
       socket: "<%= ENV['MYSQL_SOCK'] %>"
 <% end %>
