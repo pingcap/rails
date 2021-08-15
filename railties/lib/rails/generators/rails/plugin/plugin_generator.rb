@@ -120,8 +120,6 @@ module Rails
       opts = options.transform_keys(&:to_sym).except(*DUMMY_IGNORE_OPTIONS)
       opts[:force] = force
       opts[:skip_bundle] = true
-      opts[:skip_spring] = true
-      opts[:skip_listen] = true
       opts[:skip_git] = true
       opts[:skip_turbolinks] = true
       opts[:skip_webpack_install] = true
@@ -248,7 +246,7 @@ module Rails
         build(:gemspec)   unless options[:skip_gemspec]
         build(:license)
         build(:gitignore) unless options[:skip_git]
-        build(:gemfile)   unless options[:skip_gemfile]
+        build(:gemfile)
         build(:version_control)
       end
 

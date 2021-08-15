@@ -43,17 +43,6 @@ module ActiveSupport
         end
       end
 
-      module RequireDependency
-        def require_dependency(filename)
-          filename = filename.to_path if filename.respond_to?(:to_path)
-          if abspath = ActiveSupport::Dependencies.search_for_file(filename)
-            require abspath
-          else
-            require filename
-          end
-        end
-      end
-
       module Inflector
         # Concurrent::Map is not needed. This is a private class, and overrides
         # must be defined while the application boots.
@@ -89,7 +78,13 @@ module ActiveSupport
               autoloader.do_not_eager_load(autoload_path) unless eager_load?(autoload_path)
             end
 
-            Rails.autoloaders.main.enable_reloading if enable_reloading
+            if enable_reloading
+              Rails.autoloaders.main.enable_reloading
+              Rails.autoloaders.main.on_unload do |_cpath, value, _abspath|
+                value.before_remove_const if value.respond_to?(:before_remove_const)
+              end
+            end
+
             Rails.autoloaders.each(&:setup)
           end
 
@@ -110,7 +105,6 @@ module ActiveSupport
           def decorate_dependencies
             Dependencies.unhook!
             Dependencies.singleton_class.prepend(Decorations)
-            Object.prepend(RequireDependency)
           end
       end
     end
