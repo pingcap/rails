@@ -274,18 +274,18 @@ Every Rails application comes with a standard set of middleware which it uses in
     Rails.application.config.hosts << ".product.com"
     ```
 
-    You can exclude certain requests from Host Authorization checks by setting 
+    You can exclude certain requests from Host Authorization checks by setting
     `config.host_configuration.exclude`:
 
     ```ruby
     # Exclude requests for the /healthcheck/ path from host checking
-    Rails.application.config.host_configuration = { 
-      exclude: ->(request) { request.path =~ /healthcheck/ } 
+    Rails.application.config.host_configuration = {
+      exclude: ->(request) { request.path =~ /healthcheck/ }
     }
-    ``` 
+    ```
 
-    When a request comes to an unauthorized host, a default Rack application 
-    will run and respond with `403 Forbidden`. This can be customized by setting 
+    When a request comes to an unauthorized host, a default Rack application
+    will run and respond with `403 Forbidden`. This can be customized by setting
     `config.host_configuration.response_app`. For example:
 
     ```ruby
@@ -922,19 +922,17 @@ There are a few configuration options available in Active Support:
 
 * `config.active_support.cache_format_version` specifies which version of the cache serializer to use. Possible values are `6.1` and `7.0`.
 
+* `config.active_support.deprecation` configures the behavior of deprecation warnings. The options are `:raise`, `:stderr`, `:log`, `:notify`, or `:silence`. The default is `:stderr`. Alternatively, you can set `ActiveSupport::Deprecation.behavior`.
+
+* `config.active_support.disallowed_deprecation` configures the behavior of disallowed deprecation warnings. The options are `:raise`, `:stderr`, `:log`, `:notify`, or `:silence`. The default is `:raise`. Alternatively, you can set `ActiveSupport::Deprecation.disallowed_behavior`.
+
+* `config.active_support.disallowed_deprecation_warnings` configures deprecation warnings that the Application considers disallowed. This allows, for example, specific deprecations to be treated as hard failures. Alternatively, you can set `ActiveSupport::Deprecation.disallowed_warnings`.
+
+* `config.active_support.report_deprecations` allows you to disable all deprecation warnings (including disallowed deprecations); it makes `ActiveSupport::Deprecation.warn` a no-op. This is enabled by default in production.
+
 * `ActiveSupport::Logger.silencer` is set to `false` to disable the ability to silence logging in a block. The default is `true`.
 
 * `ActiveSupport::Cache::Store.logger` specifies the logger to use within cache store operations.
-
-* `ActiveSupport::Deprecation.behavior` alternative setter to `config.active_support.deprecation` which configures the behavior of deprecation warnings for Rails.
-
-* `ActiveSupport::Deprecation.disallowed_behavior` alternative setter to `config.active_support.disallowed_deprecation` which configures the behavior of disallowed deprecation warnings for Rails.
-
-* `ActiveSupport::Deprecation.disallowed_warnings` alternative setter to `config.active_support.disallowed_deprecation_warnings` which configures deprecation warnings that the Application considers disallowed. This allows, for example, specific deprecations to be treated as hard failures.
-
-* `ActiveSupport::Deprecation.silence` takes a block in which all deprecation warnings are silenced.
-
-* `ActiveSupport::Deprecation.silenced` sets whether or not to display deprecation warnings. The default is `false`.
 
 * `ActiveSupport.utc_to_local_returns_utc_offset_times` configures
   `ActiveSupport::TimeZone.utc_to_local` to return a time with a UTC offset
@@ -1667,13 +1665,11 @@ Below is a comprehensive list of all the initializers found in Rails in the orde
 
 * `set_clear_dependencies_hook`: This initializer - which runs only if `cache_classes` is set to `false` - uses `ActionDispatch::Callbacks.after` to remove the constants which have been referenced during the request from the object space so that they will be reloaded during the following request.
 
-* `initialize_dependency_mechanism`: If `config.cache_classes` is true, configures `ActiveSupport::Dependencies.mechanism` to `require` dependencies rather than `load` them.
-
 * `bootstrap_hook`: Runs all configured `before_initialize` blocks.
 
 * `i18n.callbacks`: In the development environment, sets up a `to_prepare` callback which will call `I18n.reload!` if any of the locales have changed since the last request. In production this callback will only run on the first request.
 
-* `active_support.deprecation_behavior`: Sets up deprecation reporting for environments, defaulting to `:log` for development, `:notify` for production, and `:stderr` for test. If a value isn't set for `config.active_support.deprecation` then this initializer will prompt the user to configure this line in the current environment's `config/environments` file. Can be set to an array of values. This initializer also sets up behaviors for disallowed deprecations, defaulting to `:raise` for development and test and `:log` for production. Disallowed deprecation warnings default to an empty array.
+* `active_support.deprecation_behavior`: Sets up deprecation reporting for environments, defaulting to `:log` for development, `:silence` for production, and `:stderr` for test.  Can be set to an array of values. This initializer also sets up behaviors for disallowed deprecations, defaulting to `:raise` for development and test and `:silence` for production. Disallowed deprecation warnings default to an empty array.
 
 * `active_support.initialize_time_zone`: Sets the default time zone for the application based on the `config.time_zone` setting, which defaults to "UTC".
 

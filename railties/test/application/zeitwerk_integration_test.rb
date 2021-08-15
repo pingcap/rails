@@ -139,35 +139,6 @@ class ZeitwerkIntegrationTest < ActiveSupport::TestCase
     assert_empty deps.autoloaded_constants
   end
 
-  [true, false].each do |add_aps_to_lp|
-    test "require_dependency looks autoload paths up (#{add_aps_to_lp})" do
-      add_to_config "config.add_autoload_paths_to_load_path = #{add_aps_to_lp}"
-      app_file "app/models/user.rb", "class User; end"
-      boot
-
-      assert require_dependency("user")
-    end
-
-    test "require_dependency handles absolute paths correctly (#{add_aps_to_lp})" do
-      add_to_config "config.add_autoload_paths_to_load_path = #{add_aps_to_lp}"
-      app_file "app/models/user.rb", "class User; end"
-      boot
-
-      assert require_dependency("#{app_path}/app/models/user.rb")
-    end
-
-    test "require_dependency supports arguments that respond to to_path (#{add_aps_to_lp})" do
-      add_to_config "config.add_autoload_paths_to_load_path = #{add_aps_to_lp}"
-      app_file "app/models/user.rb", "class User; end"
-      boot
-
-      user = Object.new
-      def user.to_path; "user"; end
-
-      assert require_dependency(user)
-    end
-  end
-
   test "eager loading loads the application code" do
     $zeitwerk_integration_test_user = false
     $zeitwerk_integration_test_post = false
@@ -339,6 +310,34 @@ class ZeitwerkIntegrationTest < ActiveSupport::TestCase
 
     assert_equal Module, Module.method(:const_missing).owner
     assert_equal :no_op, deps.unhook!
+  end
+
+  test "reloading invokes before_remove_const" do
+    $before_remove_const_invoked = false
+
+    app_file "app/models/foo.rb", <<~RUBY
+      # While the most common use case is classes/modules, the contract does not
+      # require values to be so. Let's weaken the test down to Object.new.
+      Foo = Object.new
+      def Foo.before_remove_const
+        $before_remove_const_invoked = true
+      end
+    RUBY
+
+    app_file "app/models/bar.rb", <<~RUBY
+      # This object does not implement before_remove_const. We define it to make
+      # sure reloading does not raise. That is, it does not blindly invoke the
+      # hook on all unloaded objects.
+      Bar = Object.new
+    RUBY
+
+    boot
+
+    assert Foo
+    assert Bar
+    ActiveSupport::Dependencies.clear
+
+    assert $before_remove_const_invoked
   end
 
   test "autoloaders.logger=" do

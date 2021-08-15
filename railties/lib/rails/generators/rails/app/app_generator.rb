@@ -98,7 +98,6 @@ module Rails
       end
       chmod "bin", 0755 & ~File.umask, verbose: false
 
-      remove_file "bin/spring" unless spring_install?
       remove_file "bin/yarn" if options[:skip_javascript]
     end
 
@@ -122,8 +121,7 @@ module Rails
         template "application.rb"
         template "environment.rb"
         template "cable.yml" unless options[:updating] || options[:skip_action_cable]
-        template "puma.rb"   unless options[:updating] || options[:skip_puma]
-        template "spring.rb" if spring_install?
+        template "puma.rb"   unless options[:updating]
         template "storage.yml" unless options[:updating] || skip_active_storage?
 
         directory "environments"
@@ -328,7 +326,6 @@ module Rails
             skip_dev_gems: true,
             skip_javascript: true,
             skip_jbuilder: true,
-            skip_spring: true,
             skip_system_test: true,
             skip_webpack_install: true,
             skip_turbolinks: true).tap do |option|
@@ -356,7 +353,7 @@ module Rails
           build(:gitattributes)
         end
 
-        build(:gemfile) unless options[:skip_gemfile]
+        build(:gemfile)
         build(:version_control)
         build(:package_json) unless options[:skip_javascript]
       end
@@ -584,7 +581,7 @@ module Rails
         create_file(*args, &block)
       end
 
-      # Registers a callback to be executed after bundle and spring binstubs
+      # Registers a callback to be executed after bundle binstubs
       # have run.
       #
       #   after_bundle do
