@@ -45,6 +45,9 @@ ActiveRecord::Schema.define do
     t.binary :binary_column,    limit: 1
   end
 
+  if ENV['tidb']
+    puts "Skip PROCEDURE test"
+  else
   ActiveRecord::Base.connection.execute <<-SQL
 DROP PROCEDURE IF EXISTS ten;
 SQL
@@ -66,7 +69,7 @@ BEGIN
   select * from topics limit num;
 END
 SQL
-
+  end
   ActiveRecord::Base.connection.drop_table "enum_tests", if_exists: true
 
   ActiveRecord::Base.connection.execute <<-SQL
