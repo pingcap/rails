@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/string/inflections"
-require "active_support/per_thread_registry"
 
 module ActiveSupport
   module Cache
@@ -13,23 +12,18 @@ module ActiveSupport
         autoload :Middleware, "active_support/cache/strategy/local_cache_middleware"
 
         # Class for storing and registering the local caches.
-        class LocalCacheRegistry # :nodoc:
-          extend ActiveSupport::PerThreadRegistry
-
-          def initialize
-            @registry = {}
-          end
+        module LocalCacheRegistry # :nodoc:
+          extend self
 
           def cache_for(local_cache_key)
-            @registry[local_cache_key]
+            registry = ActiveSupport::IsolatedExecutionState[:active_support_local_cache_registry] ||= {}
+            registry[local_cache_key]
           end
 
           def set_cache_for(local_cache_key, value)
-            @registry[local_cache_key] = value
+            registry = ActiveSupport::IsolatedExecutionState[:active_support_local_cache_registry] ||= {}
+            registry[local_cache_key] = value
           end
-
-          def self.set_cache_for(l, v); instance.set_cache_for l, v; end
-          def self.cache_for(l); instance.cache_for l; end
         end
 
         # Simple memory backed cache. This cache is not thread safe and is intended only
@@ -66,8 +60,8 @@ module ActiveSupport
         end
 
         # Use a local cache for the duration of block.
-        def with_local_cache
-          use_temporary_local_cache(LocalStore.new) { yield }
+        def with_local_cache(&block)
+          use_temporary_local_cache(LocalStore.new, &block)
         end
 
         # Middleware class can be inserted as a Rack handler to be local cache for the
@@ -170,8 +164,8 @@ module ActiveSupport
             LocalCacheRegistry.cache_for(local_cache_key)
           end
 
-          def bypass_local_cache
-            use_temporary_local_cache(nil) { yield }
+          def bypass_local_cache(&block)
+            use_temporary_local_cache(nil, &block)
           end
 
           def use_temporary_local_cache(temporary_cache)

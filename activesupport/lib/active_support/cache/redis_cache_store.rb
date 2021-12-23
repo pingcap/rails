@@ -458,17 +458,10 @@ module ActiveSupport
 
         def failsafe(method, returning: nil)
           yield
-        rescue ::Redis::BaseError => e
-          handle_exception exception: e, method: method, returning: returning
+        rescue ::Redis::BaseError => error
+          ActiveSupport.error_reporter&.report(error, handled: true, severity: :warning)
+          @error_handler&.call(method: method, exception: error, returning: returning)
           returning
-        end
-
-        def handle_exception(exception:, method:, returning:)
-          if @error_handler
-            @error_handler.(method: method, exception: exception, returning: returning)
-          end
-        rescue => failsafe
-          warn "RedisCacheStore ignored exception in handle_exception: #{failsafe.class}: #{failsafe.message}\n  #{failsafe.backtrace.join("\n  ")}"
         end
     end
   end

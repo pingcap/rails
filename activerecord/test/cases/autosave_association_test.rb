@@ -1291,9 +1291,9 @@ class TestAutosaveAssociationOnAHasOneAssociation < ActiveRecord::TestCase
   end
 
   def test_should_automatically_save_the_associated_model
-    @pirate.ship.name = "The Vile Insanity"
+    @pirate.ship.name = "The Vile Serpent"
     @pirate.save
-    assert_equal "The Vile Insanity", @pirate.reload.ship.name
+    assert_equal "The Vile Serpent", @pirate.reload.ship.name
   end
 
   def test_changed_for_autosave_should_handle_cycles
@@ -1307,9 +1307,9 @@ class TestAutosaveAssociationOnAHasOneAssociation < ActiveRecord::TestCase
   end
 
   def test_should_automatically_save_bang_the_associated_model
-    @pirate.ship.name = "The Vile Insanity"
+    @pirate.ship.name = "The Vile Serpent"
     @pirate.save!
-    assert_equal "The Vile Insanity", @pirate.reload.ship.name
+    assert_equal "The Vile Serpent", @pirate.reload.ship.name
   end
 
   def test_should_automatically_validate_the_associated_model
@@ -1377,7 +1377,7 @@ class TestAutosaveAssociationOnAHasOneAssociation < ActiveRecord::TestCase
 
   def test_should_not_save_and_return_false_if_a_callback_cancelled_saving
     pirate = Pirate.new(catchphrase: "Arr")
-    ship = pirate.build_ship(name: "The Vile Insanity")
+    ship = pirate.build_ship(name: "The Vile Serpent")
     ship.cancel_save_from_callback = true
 
     assert_no_difference "Pirate.count" do
@@ -1391,7 +1391,7 @@ class TestAutosaveAssociationOnAHasOneAssociation < ActiveRecord::TestCase
     before = [@pirate.catchphrase, @pirate.ship.name]
 
     @pirate.catchphrase = "Arr"
-    @pirate.ship.name = "The Vile Insanity"
+    @pirate.ship.name = "The Vile Serpent"
 
     # Stub the save method of the @pirate.ship instance to raise an exception
     class << @pirate.ship
@@ -1473,9 +1473,9 @@ class TestAutosaveAssociationOnABelongsToAssociation < ActiveRecord::TestCase
 
   def test_should_still_work_without_an_associated_model
     @pirate.destroy
-    @ship.reload.name = "The Vile Insanity"
+    @ship.reload.name = "The Vile Serpent"
     @ship.save
-    assert_equal "The Vile Insanity", @ship.reload.name
+    assert_equal "The Vile Serpent", @ship.reload.name
   end
 
   def test_should_automatically_save_the_associated_model
@@ -1524,7 +1524,7 @@ class TestAutosaveAssociationOnABelongsToAssociation < ActiveRecord::TestCase
   end
 
   def test_should_not_save_and_return_false_if_a_callback_cancelled_saving
-    ship = Ship.new(name: "The Vile Insanity")
+    ship = Ship.new(name: "The Vile Serpent")
     pirate = ship.build_pirate(catchphrase: "Arr")
     pirate.cancel_save_from_callback = true
 
@@ -1539,7 +1539,7 @@ class TestAutosaveAssociationOnABelongsToAssociation < ActiveRecord::TestCase
     before = [@ship.pirate.catchphrase, @ship.name]
 
     @ship.pirate.catchphrase = "Arr"
-    @ship.name = "The Vile Insanity"
+    @ship.name = "The Vile Serpent"
 
     # Stub the save method of the @ship.pirate instance to raise an exception
     class << @ship.pirate
@@ -1554,7 +1554,7 @@ class TestAutosaveAssociationOnABelongsToAssociation < ActiveRecord::TestCase
   end
 
   def test_should_not_load_the_associated_model
-    assert_queries(1) { @ship.name = "The Vile Insanity"; @ship.save! }
+    assert_queries(1) { @ship.name = "The Vile Serpent"; @ship.save! }
   end
 
   def test_should_save_with_non_nullable_foreign_keys
