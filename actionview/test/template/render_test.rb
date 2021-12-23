@@ -391,7 +391,7 @@ module RenderTestCases
   def test_without_compiled_method_container_is_deprecated
     view = ActionView::Base.with_view_paths(ActionController::Base.view_paths)
     assert_raises(NotImplementedError) do
-      assert_equal "Hello world!", view.render(template: "test/hello_world")
+      view.render(template: "test/hello_world")
     end
   end
 
@@ -701,6 +701,33 @@ module RenderTestCases
       %(Hello, World!),
       @view.render(TestRenderable.new)
     )
+  end
+
+  def test_render_mutate_string_literal
+    assert_equal "foobar", @view.render(inline: "'foo' << 'bar'", type: :ruby)
+  end
+end
+
+class FrozenStringLiteralEnabledViewRenderTest < ActiveSupport::TestCase
+  include RenderTestCases
+
+  def setup
+    @previous_frozen_literal = ActionView::Template.frozen_string_literal
+    ActionView::Template.frozen_string_literal = true
+    view_paths = ActionController::Base.view_paths
+    setup_view(view_paths)
+  end
+
+  def teardown
+    super
+    ActionView::Template.frozen_string_literal = @previous_frozen_literal
+  end
+
+  def test_render_mutate_string_literal
+    error = assert_raise ActionView::Template::Error do
+      @view.render(inline: "'foo' << 'bar'", type: :ruby)
+    end
+    assert_includes(error.message, "can't modify frozen String")
   end
 end
 

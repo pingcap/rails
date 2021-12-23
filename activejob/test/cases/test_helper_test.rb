@@ -3,6 +3,7 @@
 require "helper"
 require "active_support/core_ext/time"
 require "active_support/core_ext/date"
+require "zeitwerk"
 require "jobs/hello_job"
 require "jobs/logging_job"
 require "jobs/nested_job"
@@ -697,8 +698,33 @@ class EnqueuedJobsTest < ActiveJob::TestCase
         HelloJob.perform_later(ricardo)
       end
     end
+
     assert_match(/No enqueued job found with {:job=>HelloJob, :args=>\[#{wilma.inspect}\]}/, error.message)
     assert_match(/Potential matches: {.*?:job=>HelloJob, :args=>\[#<Person.* @id="9">\], :queue=>"default".*?}/, error.message)
+  end
+
+  def test_show_jobs_that_are_enqueued_when_job_is_not_queued_at_all
+    ricardo = Person.new(9)
+    wilma = Person.new(11)
+
+    error = assert_raise ActiveSupport::TestCase::Assertion do
+      assert_enqueued_with(job: MultipleKwargsJob, args: [wilma]) do
+        HelloJob.perform_later(ricardo)
+      end
+    end
+
+    assert_match(/No enqueued job found with {:job=>MultipleKwargsJob, :args=>\[#{wilma.inspect}\]}/, error.message)
+    assert_match(/No jobs of class MultipleKwargsJob were enqueued, job classes enqueued: HelloJob/, error.message)
+  end
+
+  def test_shows_no_jobs_enqueued_when_there_are_no_jobs
+    error = assert_raise ActiveSupport::TestCase::Assertion do
+      assert_enqueued_with(job: HelloJob, args: []) do
+      end
+    end
+
+    assert_match(/No enqueued job found with {:job=>HelloJob, :args=>\[\]}/, error.message)
+    assert_match(/No jobs were enqueued/, error.message)
   end
 
   def test_assert_enqueued_with_failure_with_no_block_with_global_id_args
@@ -1953,6 +1979,28 @@ class PerformedJobsTest < ActiveJob::TestCase
     assert_match(/Potential matches: {.*?:job=>HelloJob, :args=>\[#<Person.* @id="9">\], :queue=>"default".*?}/, error.message)
   end
 
+  def test_assert_performed_says_no_jobs_performed
+    error = assert_raise ActiveSupport::TestCase::Assertion do
+      assert_performed_with(job: HelloJob, args: [])
+    end
+
+    assert_match(/No performed job found with {:job=>HelloJob, :args=>\[\]}/, error.message)
+    assert_match(/No jobs were performed/, error.message)
+  end
+
+  def test_assert_performed_when_not_matching_the_class_shows_alteratives
+    ricardo = Person.new(9)
+    wilma = Person.new(11)
+    HelloJob.perform_later(ricardo)
+    perform_enqueued_jobs
+    error = assert_raise ActiveSupport::TestCase::Assertion do
+      assert_performed_with(job: MultipleKwargsJob, args: [wilma])
+    end
+
+    assert_match(/No performed job found with {:job=>MultipleKwargsJob, :args=>\[#<Person.* @id=11>\]}/, error.message)
+    assert_match(/No jobs of class MultipleKwargsJob were performed, job classes performed: HelloJob/, error.message)
+  end
+
   def test_assert_performed_with_does_not_change_jobs_count
     assert_performed_with(job: HelloJob) do
       HelloJob.perform_later
@@ -2005,5 +2053,17 @@ end
 class InheritedJobTest < ActiveJob::TestCase
   def test_queue_adapter_is_test_adapter
     assert_instance_of ActiveJob::QueueAdapters::TestAdapter, InheritedJob.queue_adapter
+  end
+end
+
+class QueueAdapterJobTest < ActiveJob::TestCase
+  def test_queue_adapter_is_test_adapter
+    Zeitwerk.with_loader do |loader|
+      loader.push_dir("test/jobs")
+      loader.setup
+      assert_instance_of ActiveJob::QueueAdapters::TestAdapter, QueueAdapterJob.queue_adapter
+    ensure
+      loader.unload
+    end
   end
 end

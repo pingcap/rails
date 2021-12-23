@@ -94,10 +94,6 @@ module Rails
     def test
       template "test/test_helper.rb"
       template "test/%namespaced_name%_test.rb"
-      append_file "Rakefile", <<~EOF
-        #{rakefile_test_tasks}
-        task default: :test
-      EOF
 
       if engine?
         empty_directory_with_keep_file "test/fixtures/files"
@@ -121,8 +117,7 @@ module Rails
       opts[:force] = force
       opts[:skip_bundle] = true
       opts[:skip_git] = true
-      opts[:skip_turbolinks] = true
-      opts[:skip_webpack_install] = true
+      opts[:skip_hotwire] = true
       opts[:dummy_app] = true
 
       invoke Rails::Generators::AppGenerator,
@@ -146,10 +141,6 @@ module Rails
           config.action_controller.include_all_helpers = false
         RUBY
       end
-    end
-
-    def test_dummy_webpacker_assets
-      template "rails/javascripts.js",    "#{dummy_path}/app/javascript/packs/application.js", force: true
     end
 
     def test_dummy_sprocket_assets
@@ -240,6 +231,10 @@ module Rails
       public_task :set_default_accessors!
       public_task :create_root
 
+      def target_rails_prerelease
+        super("plugin new")
+      end
+
       def create_root_files
         build(:readme)
         build(:rakefile)
@@ -321,8 +316,7 @@ module Rails
         mute do
           build(:generate_test_dummy)
           build(:test_dummy_config)
-          build(:test_dummy_webpacker_assets)
-          build(:test_dummy_sprocket_assets) unless options[:skip_sprockets]
+          build(:test_dummy_sprocket_assets) unless skip_sprockets?
           build(:test_dummy_clean)
           # ensure that bin/rails has proper dummy_path
           build(:bin, true)
@@ -404,6 +398,10 @@ module Rails
         end
       end
 
+      def rails_version_specifier(gem_version = Rails.gem_version)
+        [">= #{gem_version}"]
+      end
+
       def valid_const?
         if /-\d/.match?(original_name)
           raise Error, "Invalid plugin name #{original_name}. Please give a name which does not contain a namespace starting with numeric characters."
@@ -422,18 +420,6 @@ module Rails
 
       def get_builder_class
         defined?(::PluginBuilder) ? ::PluginBuilder : Rails::PluginBuilder
-      end
-
-      def rakefile_test_tasks
-        <<-RUBY
-require "rake/testtask"
-
-Rake::TestTask.new(:test) do |t|
-  t.libs << "test"
-  t.pattern = "test/**/*_test.rb"
-  t.verbose = false
-end
-        RUBY
       end
 
       def dummy_path(path = nil)

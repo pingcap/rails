@@ -56,6 +56,7 @@ module ActiveRecord
       end
 
       def initialize(connection, logger, connection_options, config)
+        check_prepared_statements_deprecation(config)
         superclass_config = config.reverse_merge(prepared_statements: false)
         super(connection, logger, connection_options, superclass_config)
         configure_connection
@@ -89,11 +90,9 @@ module ActiveRecord
 
       # HELPER METHODS ===========================================
 
-      def each_hash(result) # :nodoc:
+      def each_hash(result, &block) # :nodoc:
         if block_given?
-          result.each(as: :hash, symbolize_keys: true) do |row|
-            yield row
-          end
+          result.each(as: :hash, symbolize_keys: true, &block)
         else
           to_enum(:each_hash, result)
         end
@@ -142,6 +141,14 @@ module ActiveRecord
       end
 
       private
+        def check_prepared_statements_deprecation(config)
+          if !config.key?(:prepared_statements)
+            ActiveSupport::Deprecation.warn(<<-MSG.squish)
+              The default value of `prepared_statements` for the mysql2 adapter will be changed from +false+ to +true+ in Rails 7.2.
+            MSG
+          end
+        end
+
         def connect
           @connection = self.class.new_client(@config)
           configure_connection

@@ -116,7 +116,7 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
   fixtures :accounts, :categories, :companies, :developers, :projects,
            :developers_projects, :topics, :authors, :author_addresses, :comments,
            :posts, :readers, :taggings, :cars, :tags,
-           :categorizations, :zines, :interests
+           :categorizations, :zines, :interests, :humans
 
   def setup
     Client.destroyed_client_ids.clear
@@ -777,9 +777,9 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     assert_equal firm.clients.count, firm.clients.update_all(description: "Great!")
   end
 
-  def test_belongs_to_sanity
+  def test_belongs_to_with_new_object
     c = Client.new
-    assert_nil c.firm, "belongs_to failed sanity check on new object"
+    assert_nil c.firm, "belongs_to failed on new object"
   end
 
   def test_find_ids
@@ -1449,7 +1449,7 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     assert_equal original_count, topic.reload.replies_count
   end
 
-  def test_calling_update_changing_ids_doesnt_change_counter_cache
+  def test_calling_update_changing_ids_changes_the_counter_cache
     topic1 = Topic.find(1)
     topic2 = Topic.find(3)
     original_count1 = topic1.replies.to_a.size
@@ -1465,6 +1465,24 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     reply2.update(parent_id: topic1.id)
     assert_equal original_count1, topic1.reload.replies_count
     assert_equal original_count2, topic2.reload.replies_count
+  end
+
+  def test_calling_update_changing_ids_of_inversed_association_changes_the_counter_cache
+    assert_predicate Post.reflect_on_association(:comments), :has_inverse?
+
+    post1 = Post.first
+    post2 = Post.second
+
+    original_count1 = post1.comments.count
+    original_count2 = post2.comments.count
+
+    post1.comments.first.update(post_id: post2.id)
+    assert_equal original_count1 - 1, post1.reload.comments_count
+    assert_equal original_count2 + 1, post2.reload.comments_count
+
+    post2.comments.first.update(post_id: post1.id)
+    assert_equal original_count1, post1.reload.comments_count
+    assert_equal original_count2, post2.reload.comments_count
   end
 
   def test_deleting_a_collection
@@ -2292,9 +2310,9 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     assert_no_queries { assert firm.clients.many? }
   end
 
-  def test_subsequent_calls_to_many_should_not_use_query
+  def test_subsequent_calls_to_many_should_use_query
     firm = companies(:first_firm)
-    assert_queries(1) do
+    assert_queries(2) do
       firm.clients.many?
       firm.clients.many?
     end
@@ -2376,9 +2394,9 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     assert_no_queries { assert_not firm.clients.one? }
   end
 
-  def test_subsequent_calls_to_one_should_not_use_query
+  def test_subsequent_calls_to_one_should_use_query
     firm = companies(:first_firm)
-    assert_queries(1) do
+    assert_queries(2) do
       firm.clients.one?
       firm.clients.one?
     end
@@ -2544,6 +2562,14 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
 
     assert_equal [image], post.images
     assert_equal post, image.imageable
+  end
+
+  def test_joining_through_a_polymorphic_association_with_a_where_clause
+    writer   = humans(:gordon)
+    category = categories(:general)
+    TypedEssay.create! category: category, writer: writer
+
+    assert_equal 1, Category.joins(:human_writers_of_typed_essays).count
   end
 
   def test_build_with_polymorphic_has_many_does_not_allow_to_override_type_and_id
@@ -2784,7 +2810,7 @@ class HasManyAssociationsTest < ActiveRecord::TestCase
     end
 
     assert_equal [original_child], car.reload.failed_bulbs
-    assert_equal "Failed to destroy the record", error.message
+    assert_equal "Failed to destroy FailedBulb with #{FailedBulb.primary_key}=#{original_child.id}", error.message
   end
 
   test "updates counter cache when default scope is given" do

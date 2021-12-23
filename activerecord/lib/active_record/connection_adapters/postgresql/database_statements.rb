@@ -28,6 +28,8 @@ module ActiveRecord
 
         def write_query?(sql) # :nodoc:
           !READ_QUERY.match?(sql)
+        rescue ArgumentError # Invalid encoding
+          !READ_QUERY.match?(sql.b)
         end
 
         # Executes an SQL statement, returning a PG::Result object on success
@@ -35,6 +37,7 @@ module ActiveRecord
         # Note: the PG::Result object is manually memory managed; if you don't
         # need it specifically, you may want consider the <tt>exec_query</tt> wrapper.
         def execute(sql, name = nil)
+          sql = transform_query(sql)
           check_if_write_query(sql)
 
           materialize_transactions
@@ -120,6 +123,14 @@ module ActiveRecord
         # Aborts a transaction.
         def exec_rollback_db_transaction # :nodoc:
           execute("ROLLBACK", "TRANSACTION")
+        end
+
+        # From https://www.postgresql.org/docs/current/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT
+        HIGH_PRECISION_CURRENT_TIMESTAMP = Arel.sql("CURRENT_TIMESTAMP").freeze # :nodoc:
+        private_constant :HIGH_PRECISION_CURRENT_TIMESTAMP
+
+        def high_precision_current_timestamp
+          HIGH_PRECISION_CURRENT_TIMESTAMP
         end
 
         private

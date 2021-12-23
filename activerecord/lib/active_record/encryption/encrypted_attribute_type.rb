@@ -13,10 +13,11 @@ module ActiveRecord
       attr_reader :scheme, :cast_type
 
       delegate :key_provider, :downcase?, :deterministic?, :previous_schemes, :with_context, :fixed?, to: :scheme
+      delegate :accessor, to: :cast_type
 
       # === Options
       #
-      # * <tt>:scheme</tt> - An +Scheme+ with the encryption properties for this attribute.
+      # * <tt>:scheme</tt> - A +Scheme+ with the encryption properties for this attribute.
       # * <tt>:cast_type</tt> - A type that will be used to serialize (before encrypting) and deserialize
       #   (after decrypting). +ActiveModel::Type::String+ by default.
       def initialize(scheme:, cast_type: ActiveModel::Type::String.new, previous_type: false)
