@@ -273,75 +273,6 @@ module ActiveRecord
         end
       end
 
-      def test_create_table_with_polymorphic_reference_uses_all_column_names_in_index
-        migration = Class.new(ActiveRecord::Migration[6.0]) {
-          def migrate(x)
-            create_table :more_testings do |t|
-              t.references :widget, polymorphic: true, index: true
-              t.belongs_to :gizmo, polymorphic: true, index: true
-            end
-          end
-        }.new
-
-        ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
-        assert connection.index_exists?(:more_testings, [:widget_type, :widget_id], name: :index_more_testings_on_widget_type_and_widget_id)
-        assert connection.index_exists?(:more_testings, [:gizmo_type, :gizmo_id], name: :index_more_testings_on_gizmo_type_and_gizmo_id)
-      ensure
-        connection.drop_table :more_testings rescue nil
-      end
-
-      def test_change_table_with_polymorphic_reference_uses_all_column_names_in_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
-        migration = Class.new(ActiveRecord::Migration[6.0]) {
-          def migrate(x)
-            change_table :testings do |t|
-              t.references :widget, polymorphic: true, index: true
-              t.belongs_to :gizmo, polymorphic: true, index: true
-            end
-          end
-        }.new
-
-        ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
-
-        assert connection.index_exists?(:testings, [:widget_type, :widget_id], name: :index_testings_on_widget_type_and_widget_id)
-        assert connection.index_exists?(:testings, [:gizmo_type, :gizmo_id], name: :index_testings_on_gizmo_type_and_gizmo_id)
-      end
-
-      def test_create_join_table_with_polymorphic_reference_uses_all_column_names_in_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
-        migration = Class.new(ActiveRecord::Migration[6.0]) {
-          def migrate(x)
-            create_join_table :more, :testings do |t|
-              t.references :widget, polymorphic: true, index: true
-              t.belongs_to :gizmo, polymorphic: true, index: true
-            end
-          end
-        }.new
-
-        ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
-
-        assert connection.index_exists?(:more_testings, [:widget_type, :widget_id], name: :index_more_testings_on_widget_type_and_widget_id)
-        assert connection.index_exists?(:more_testings, [:gizmo_type, :gizmo_id], name: :index_more_testings_on_gizmo_type_and_gizmo_id)
-      ensure
-        connection.drop_table :more_testings rescue nil
-      end
-
-      def test_polymorphic_add_reference_uses_all_column_names_in_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
-        migration = Class.new(ActiveRecord::Migration[6.0]) {
-          def migrate(x)
-            add_reference :testings, :widget, polymorphic: true, index: true
-            add_belongs_to :testings, :gizmo, polymorphic: true, index: true
-          end
-        }.new
-
-        ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
-
-        assert connection.index_exists?(:testings, [:widget_type, :widget_id], name: :index_testings_on_widget_type_and_widget_id)
-        assert connection.index_exists?(:testings, [:gizmo_type, :gizmo_id], name: :index_testings_on_gizmo_type_and_gizmo_id)
-      end
-
       def test_datetime_doesnt_set_precision_on_create_table
         migration = Class.new(ActiveRecord::Migration[6.1]) {
           def migrate(x)
@@ -526,7 +457,7 @@ module ActiveRecord
         assert connection.column_exists?(:testings, :published_at, **precision_implicit_default)
       end
 
-      def test_change_table_allows_if_exists_option_on_6_1
+      def test_change_table_allows_if_exists_option_on_7_0
         migration = Class.new(ActiveRecord::Migration[7.0]) {
           def migrate(x)
             change_table(:testings) do |t|
@@ -538,6 +469,18 @@ module ActiveRecord
         ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
 
         assert_not connection.column_exists?(:testings, :foo)
+      end
+
+      def test_add_reference_allows_if_exists_option_on_7_0
+        migration = Class.new(ActiveRecord::Migration[7.0]) {
+          def migrate(x)
+            add_reference :testings, :widget, if_not_exists: true
+          end
+        }.new
+
+        ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
+
+        assert connection.column_exists?(:testings, :widget_id)
       end
 
       if current_adapter?(:SQLite3Adapter)
@@ -553,7 +496,7 @@ module ActiveRecord
           ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
 
           testings_id_column = connection.columns(:more_testings).find { |el| el.name == "testings_id" }
-          assert_equal "integer", testings_id_column.sql_type
+          assert_match(/integer/i, testings_id_column.sql_type)
         ensure
           connection.drop_table :more_testings rescue nil
         end
@@ -578,7 +521,7 @@ module ActiveRecord
           ActiveRecord::Migrator.new(:up, [create_migration, migration], @schema_migration).migrate
 
           testings_id_column = connection.columns(:more_testings).find { |el| el.name == "testings_id" }
-          assert_equal "integer", testings_id_column.sql_type
+          assert_match(/integer/i, testings_id_column.sql_type)
         ensure
           connection.drop_table :more_testings rescue nil
         end
@@ -593,6 +536,132 @@ module ActiveRecord
           end
         end
     end
+  end
+end
+
+module LegacyPolymorphicReferenceIndexTestCases
+  attr_reader :connection
+
+  def setup
+    @connection = ActiveRecord::Base.connection
+    @schema_migration = @connection.schema_migration
+    @verbose_was = ActiveRecord::Migration.verbose
+    ActiveRecord::Migration.verbose = false
+
+    connection.create_table :testings, if_not_exists: true
+  end
+
+  def teardown
+    ActiveRecord::Migration.verbose = @verbose_was
+    ActiveRecord::SchemaMigration.delete_all rescue nil
+    connection.drop_table :testings rescue nil
+  end
+
+  def test_create_table_with_polymorphic_reference_uses_all_column_names_in_index
+    migration = Class.new(migration_class) {
+      def migrate(x)
+        create_table :more_testings do |t|
+          t.references :widget, polymorphic: true, index: true
+          t.belongs_to :gizmo, polymorphic: true, index: true
+        end
+      end
+    }.new
+
+    ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
+
+    assert connection.index_exists?(:more_testings, [:widget_type, :widget_id], name: :index_more_testings_on_widget_type_and_widget_id)
+    assert connection.index_exists?(:more_testings, [:gizmo_type, :gizmo_id], name: :index_more_testings_on_gizmo_type_and_gizmo_id)
+  ensure
+    connection.drop_table :more_testings rescue nil
+  end
+
+  def test_change_table_with_polymorphic_reference_uses_all_column_names_in_index
+    migration = Class.new(migration_class) {
+      def migrate(x)
+        change_table :testings do |t|
+          t.references :widget, polymorphic: true, index: true
+          t.belongs_to :gizmo, polymorphic: true, index: true
+        end
+      end
+    }.new
+
+    ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
+
+    assert connection.index_exists?(:testings, [:widget_type, :widget_id], name: :index_testings_on_widget_type_and_widget_id)
+    assert connection.index_exists?(:testings, [:gizmo_type, :gizmo_id], name: :index_testings_on_gizmo_type_and_gizmo_id)
+  end
+
+  def test_create_join_table_with_polymorphic_reference_uses_all_column_names_in_index
+    migration = Class.new(migration_class) {
+      def migrate(x)
+        create_join_table :more, :testings do |t|
+          t.references :widget, polymorphic: true, index: true
+          t.belongs_to :gizmo, polymorphic: true, index: true
+        end
+      end
+    }.new
+
+    ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
+
+    assert connection.index_exists?(:more_testings, [:widget_type, :widget_id], name: :index_more_testings_on_widget_type_and_widget_id)
+    assert connection.index_exists?(:more_testings, [:gizmo_type, :gizmo_id], name: :index_more_testings_on_gizmo_type_and_gizmo_id)
+  ensure
+    connection.drop_table :more_testings rescue nil
+  end
+
+  def test_polymorphic_add_reference_uses_all_column_names_in_index
+    migration = Class.new(migration_class) {
+      def migrate(x)
+        add_reference :testings, :widget, polymorphic: true, index: true
+        add_belongs_to :testings, :gizmo, polymorphic: true, index: true
+      end
+    }.new
+
+    ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
+
+    assert connection.index_exists?(:testings, [:widget_type, :widget_id], name: :index_testings_on_widget_type_and_widget_id)
+    assert connection.index_exists?(:testings, [:gizmo_type, :gizmo_id], name: :index_testings_on_gizmo_type_and_gizmo_id)
+  end
+end
+
+module LegacyPolymorphicReferenceIndexTest
+  class V6_0 < ActiveRecord::TestCase
+    include LegacyPolymorphicReferenceIndexTestCases
+
+    self.use_transactional_tests = false
+
+    private
+      def migration_class
+        ActiveRecord::Migration[6.0]
+      end
+  end
+
+  class V5_2 < V6_0
+    private
+      def migration_class
+        ActiveRecord::Migration[5.2]
+      end
+  end
+
+  class V5_1 < V6_0
+    private
+      def migration_class
+        ActiveRecord::Migration[5.1]
+      end
+  end
+
+  class V5_0 < V6_0
+    private
+      def migration_class
+        ActiveRecord::Migration[5.0]
+      end
+  end
+
+  class V4_2 < V6_0
+    private
+      def migration_class
+        ActiveRecord::Migration[4.2]
+      end
   end
 end
 

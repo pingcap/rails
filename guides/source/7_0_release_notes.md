@@ -262,11 +262,11 @@ Please refer to the [Changelog][active-support] for detailed changes.
 *   Remove deprecated support to use `Range#include?` to check the inclusion of a value in
     a date time range is deprecated.
 
-*   Remove deprecate `ActiveSupport::Multibyte::Unicode.default_normalization_form`.
+*   Remove deprecated `ActiveSupport::Multibyte::Unicode.default_normalization_form`.
 
 ### Deprecations
 
-*   Deprecate passing a format to `#to_s` in favor of `#to_formatted_s` in `Array`, `Range`, `Date`, `DateTime`, `Time`,
+*   Deprecate passing a format to `#to_s` in favor of `#to_fs` in `Array`, `Range`, `Date`, `DateTime`, `Time`,
     `BigDecimal`, `Float` and, `Integer`.
 
     This deprecation is to allow Rails application to take advantage of a Ruby 3.1
