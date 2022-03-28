@@ -14,6 +14,13 @@ module ActiveRecord
       @connection.materialize_transactions
     end
 
+    def teardown
+      Book.delete_all
+      Event.delete_all
+      Post.delete_all
+      @connection.execute("DELETE FROM subscribers") rescue nil
+    end
+
     ##
     # PostgreSQL does not support null bytes in strings
     unless current_adapter?(:PostgreSQLAdapter) ||
@@ -77,6 +84,7 @@ module ActiveRecord
     end
 
     def test_indexes
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
       idx_name = "accounts_idx"
 
       indexes = @connection.indexes("accounts")
@@ -123,6 +131,8 @@ module ActiveRecord
     def test_exec_query_returns_an_empty_result
       result = @connection.exec_query "INSERT INTO subscribers(nick) VALUES('me')"
       assert_instance_of(ActiveRecord::Result, result)
+    ensure
+      @connection.execute("DELETE FROM subscribers")
     end
 
     if current_adapter?(:Mysql2Adapter)
@@ -312,6 +322,7 @@ module ActiveRecord
     end
 
     def test_foreign_key_violations_are_translated_to_specific_exception_with_validate_false
+      skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#foreign-key") if ENV['tidb'].present?
       klass_has_fk = Class.new(ActiveRecord::Base) do
         self.table_name = "fk_test_has_fk"
       end
@@ -326,6 +337,7 @@ module ActiveRecord
     end
 
     def test_foreign_key_violations_on_insert_are_translated_to_specific_exception
+      skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#foreign-key") if ENV['tidb'].present?
       error = assert_raises(ActiveRecord::InvalidForeignKey) do
         insert_into_fk_test_has_fk
       end
@@ -334,6 +346,7 @@ module ActiveRecord
     end
 
     def test_foreign_key_violations_on_delete_are_translated_to_specific_exception
+      skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#foreign-key") if ENV['tidb'].present?
       insert_into_fk_test_has_fk fk_id: 1
 
       error = assert_raises(ActiveRecord::InvalidForeignKey) do

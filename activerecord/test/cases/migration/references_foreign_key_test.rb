@@ -156,7 +156,6 @@ if ActiveRecord::Base.connection.supports_foreign_keys?
           @connection.change_table :testing_parents do |t|
             t.references :testing, foreign_key: true
           end
-
           fk = @connection.foreign_keys("testing_parents").first
           assert_equal "testing_parents", fk.from_table
           assert_equal "testing", fk.to_table

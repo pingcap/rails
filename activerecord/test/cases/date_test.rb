@@ -4,6 +4,10 @@ require "cases/helper"
 require "models/topic"
 
 class DateTest < ActiveRecord::TestCase
+  def teardown
+    Topic.delete_all
+  end
+
   def test_date_with_time_value
     time_value = Time.new(2016, 05, 11, 19, 0, 0)
     topic = Topic.create(last_read: time_value)

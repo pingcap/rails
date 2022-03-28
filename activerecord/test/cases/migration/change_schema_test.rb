@@ -26,6 +26,7 @@ module ActiveRecord
       end
 
       def test_add_column_with_primary_key_attribute
+        skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#primary-key") if ENV['tidb'].present?
         testing_table_with_only_foo_attribute do
           connection.add_column :testings, :id, :primary_key
           assert_equal connection.columns(:testings).size, 2

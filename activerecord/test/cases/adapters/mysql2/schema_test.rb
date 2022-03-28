@@ -71,6 +71,7 @@ module ActiveRecord
       end
 
       def test_dump_indexes
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         index_a_name = "index_key_tests_on_snack"
         index_b_name = "index_key_tests_on_pizza"
         index_c_name = "index_key_tests_on_awesome"
@@ -94,6 +95,7 @@ module ActiveRecord
 
       unless mysql_enforcing_gtid_consistency?
         def test_drop_temporary_table
+          skip("TiDB issue: https://github.com/pingcap/tidb/issues/26278") if ENV['tidb'].present?
           @connection.transaction do
             @connection.create_table(:temp_table, temporary: true)
             # if it doesn't properly say DROP TEMPORARY TABLE, the transaction commit
@@ -121,6 +123,7 @@ class Mysql2AnsiQuotesTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_foreign_keys_method_with_ansi_quotes
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
     fks = @connection.foreign_keys("lessons_students")
     assert_equal([["lessons_students", "students", :cascade]],
                  fks.map { |fk| [fk.from_table, fk.to_table, fk.on_delete] })

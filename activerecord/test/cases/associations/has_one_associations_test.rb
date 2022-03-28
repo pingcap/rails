@@ -28,6 +28,10 @@ class HasOneAssociationsTest < ActiveRecord::TestCase
     Account.destroyed_account_ids.clear
   end
 
+  def teardown
+    Post.delete_all
+  end
+
   def test_has_one
     firm = companies(:first_firm)
     first_account = Account.find(1)

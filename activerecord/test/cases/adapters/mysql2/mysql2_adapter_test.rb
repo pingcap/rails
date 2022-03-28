@@ -102,7 +102,7 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
 
   def test_errors_for_bigint_fks_on_integer_pk_table_in_alter_table
     # table old_cars has primary key of integer
-
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
     error = assert_raises(ActiveRecord::MismatchedForeignKey) do
       @conn.add_reference :engines, :old_car
       @conn.add_foreign_key :engines, :old_cars
@@ -123,7 +123,7 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
 
   def test_errors_for_bigint_fks_on_integer_pk_table_in_create_table
     # table old_cars has primary key of integer
-
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
     error = assert_raises(ActiveRecord::MismatchedForeignKey) do
       @conn.execute(<<~SQL)
         CREATE TABLE activerecord_unittest.foos (
@@ -150,7 +150,7 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
 
   def test_errors_for_integer_fks_on_bigint_pk_table_in_create_table
     # table old_cars has primary key of bigint
-
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
     error = assert_raises(ActiveRecord::MismatchedForeignKey) do
       @conn.execute(<<~SQL)
         CREATE TABLE activerecord_unittest.foos (
@@ -177,7 +177,7 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
 
   def test_errors_for_bigint_fks_on_string_pk_table_in_create_table
     # table old_cars has primary key of string
-
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26111") if ENV['tidb'].present?
     error = assert_raises(ActiveRecord::MismatchedForeignKey) do
       @conn.execute(<<~SQL)
         CREATE TABLE activerecord_unittest.foos (

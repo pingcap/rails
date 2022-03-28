@@ -29,6 +29,10 @@ class NestedAttributesWithCallbacksTest < ActiveRecord::TestCase
     @birds = @pirate.birds.to_a
   end
 
+  def teardown
+    Bird.delete_all
+  end
+
   def bird_to_update
     @birds[0]
   end

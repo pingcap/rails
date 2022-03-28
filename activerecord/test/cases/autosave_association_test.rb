@@ -1120,6 +1120,7 @@ class TestDestroyAsPartOfAutosaveAssociation < ActiveRecord::TestCase
   end
 
   def test_should_save_new_record_that_has_same_value_as_existing_record_marked_for_destruction_on_field_that_has_unique_index
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     Bird.connection.add_index :birds, :name, unique: true
 
     3.times { |i| @pirate.birds.create(name: "unique_birds_#{i}") }
@@ -1130,7 +1131,7 @@ class TestDestroyAsPartOfAutosaveAssociation < ActiveRecord::TestCase
 
     assert_equal 3, @pirate.birds.reload.length
   ensure
-    Bird.connection.remove_index :birds, column: :name
+    Bird.connection.remove_index :birds, column: :name rescue nil
   end
 
   # Add and remove callbacks tests for association collections.

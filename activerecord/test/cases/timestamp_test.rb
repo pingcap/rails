@@ -488,6 +488,7 @@ class TimestampsWithoutTransactionTest < ActiveRecord::TestCase
   end
 
   def test_index_is_created_for_both_timestamps
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     ActiveRecord::Base.connection.create_table(:foos, force: true) do |t|
       t.timestamps null: true, index: true
     end
@@ -495,6 +496,6 @@ class TimestampsWithoutTransactionTest < ActiveRecord::TestCase
     indexes = ActiveRecord::Base.connection.indexes("foos")
     assert_equal ["created_at", "updated_at"], indexes.flat_map(&:columns).sort
   ensure
-    ActiveRecord::Base.connection.drop_table(:foos)
+    ActiveRecord::Base.connection.drop_table(:foos) rescue nil
   end
 end

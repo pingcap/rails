@@ -11,6 +11,14 @@ module ActiveRecord
   class RelationTest < ActiveRecord::TestCase
     fixtures :posts, :comments, :authors, :author_addresses, :ratings, :categorizations
 
+    def teardown
+      Post.delete_all
+      Comment.delete_all
+      Author.delete_all
+      Rating.delete_all
+      Categorization.delete_all
+    end
+
     def test_construction
       relation = Relation.new(FakeKlass, table: :b)
       assert_equal FakeKlass, relation.klass

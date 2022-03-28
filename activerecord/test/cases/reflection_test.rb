@@ -37,6 +37,12 @@ class ReflectionTest < ActiveRecord::TestCase
     @first = Topic.find(1)
   end
 
+  def teardown
+    Hotel.delete_all 
+    Department.delete_all
+    Chef.delete_all
+  end
+
   def test_human_name
     assert_equal "Price estimate", PriceEstimate.model_name.human
     assert_equal "Subscriber", Subscriber.model_name.human

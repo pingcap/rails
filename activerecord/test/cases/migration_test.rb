@@ -210,6 +210,7 @@ class MigrationTest < ActiveRecord::TestCase
   end
 
   def test_remove_column_with_if_not_exists_not_set
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26137") if ENV['tidb'].present?
     migration_a = Class.new(ActiveRecord::Migration::Current) {
       def version; 100 end
       def migrate(x)
@@ -851,6 +852,7 @@ class MigrationTest < ActiveRecord::TestCase
 
   unless mysql_enforcing_gtid_consistency?
     def test_create_table_with_query
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/4754") if ENV['tidb'].present?
       Person.connection.create_table :table_from_query_testings, as: "SELECT id FROM people WHERE id = 1"
 
       columns = Person.connection.columns(:table_from_query_testings)
@@ -862,6 +864,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_create_table_with_query_from_relation
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/4754") if ENV['tidb'].present?
       Person.connection.create_table :table_from_query_testings, as: Person.select(:id).where(id: 1)
 
       columns = Person.connection.columns(:table_from_query_testings)
@@ -956,6 +959,7 @@ class MigrationTest < ActiveRecord::TestCase
 
   if ActiveRecord::Base.connection.supports_advisory_locks?
     def test_migrator_generates_valid_lock_id
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       migration = Class.new(ActiveRecord::Migration::Current).new
       migrator = ActiveRecord::Migrator.new(:up, [migration], @schema_migration, 100)
 
@@ -968,6 +972,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_generate_migrator_advisory_lock_id
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       # It is important we are consistent with how we generate this so that
       # exclusive locking works across migrator versions
       migration = Class.new(ActiveRecord::Migration::Current).new
@@ -984,6 +989,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_migrator_one_up_with_unavailable_lock
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       assert_no_column Person, :last_name
 
       migration = Class.new(ActiveRecord::Migration::Current) {
@@ -1005,6 +1011,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_migrator_one_up_with_unavailable_lock_using_run
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       assert_no_column Person, :last_name
 
       migration = Class.new(ActiveRecord::Migration::Current) {
@@ -1062,6 +1069,7 @@ class MigrationTest < ActiveRecord::TestCase
     end
 
     def test_with_advisory_lock_raises_the_right_error_when_it_fails_to_release_lock
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
       migration = Class.new(ActiveRecord::Migration::Current).new
       migrator = ActiveRecord::Migrator.new(:up, [migration], @schema_migration, 100)
       lock_id = migrator.send(:generate_migrator_advisory_lock_id)
@@ -1118,6 +1126,7 @@ end
 
 class ReservedWordsMigrationTest < ActiveRecord::TestCase
   def test_drop_index_from_table_named_values
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     connection = Person.connection
     connection.create_table :values, force: true do |t|
       t.integer :value
@@ -1134,6 +1143,7 @@ end
 
 class ExplicitlyNamedIndexMigrationTest < ActiveRecord::TestCase
   def test_drop_index_by_name
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
     connection = Person.connection
     connection.create_table :values, force: true do |t|
       t.integer :value
@@ -1162,6 +1172,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_adding_multiple_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       classname = ActiveRecord::Base.connection.class.name[/[^:]*$/]
       expected_query_count = {
         "Mysql2Adapter"     => 1,
@@ -1187,6 +1198,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_rename_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :qualification
       end
@@ -1204,6 +1216,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_removing_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :qualification, :experience
       end
@@ -1222,6 +1235,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_adding_timestamps
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :title
       end
@@ -1240,6 +1254,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_removing_timestamps
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.timestamps
       end
@@ -1258,6 +1273,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_adding_indexes
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :username
         t.string :name
@@ -1290,6 +1306,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_removing_index
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :name
         t.index :name
@@ -1319,6 +1336,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_changing_columns
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :name
         t.date :birthdate
@@ -1389,6 +1407,7 @@ if ActiveRecord::Base.connection.supports_bulk_alter?
     end
 
     def test_changing_index
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/5166") if ENV['tidb'].present?
       with_bulk_change_table do |t|
         t.string :username
         t.index :username, name: :username_index

@@ -479,7 +479,7 @@ class TransactionTest < ActiveRecord::TestCase
 
     assert_not_predicate topic_one, :persisted?
     assert_not_predicate topic_two, :persisted?
-  end
+  end if Topic.connection.supports_savepoints?
 
   def test_nested_transaction_without_new_transaction_applies_parent_state_on_rollback
     topic_one = Topic.new(title: "A new topic")
@@ -500,7 +500,7 @@ class TransactionTest < ActiveRecord::TestCase
 
     assert_not_predicate topic_one, :persisted?
     assert_not_predicate topic_two, :persisted?
-  end
+  end if Topic.connection.supports_savepoints?
 
   def test_double_nested_transaction_applies_parent_state_on_rollback
     topic_one = Topic.new(title: "A new topic")
@@ -689,7 +689,7 @@ class TransactionTest < ActiveRecord::TestCase
         Topic.connection.release_savepoint("another")
       end
     end
-  end
+  end if Topic.connection.supports_savepoints?
 
   def test_savepoints_name
     Topic.transaction do
@@ -709,7 +709,7 @@ class TransactionTest < ActiveRecord::TestCase
         assert_equal "active_record_1", Topic.connection.current_transaction.savepoint_name
       end
     end
-  end
+  end if Topic.connection.supports_savepoints?
 
   def test_rollback_when_commit_raises
     assert_called(Topic.connection, :begin_db_transaction) do
@@ -1114,7 +1114,7 @@ class TransactionTest < ActiveRecord::TestCase
         Topic.transaction(requires_new: true) { }
       end
     end
-  end
+  end if Topic.connection.supports_savepoints?
 
   def test_raising_does_not_materialize_transaction
     assert_no_queries do
@@ -1184,7 +1184,7 @@ class TransactionsWithTransactionalFixturesTest < ActiveRecord::TestCase
     rescue
       assert_not_predicate @first.reload, :approved?
     end
-  end
+  end if Topic.connection.supports_savepoints?
 
   def test_no_automatic_savepoint_for_inner_transaction
     @first = Topic.find(1)

@@ -49,6 +49,12 @@ class EagerAssociationTest < ActiveRecord::TestCase
             :owners, :pets, :author_favorites, :jobs, :references, :subscribers, :subscriptions, :books,
             :developers, :projects, :developers_projects, :members, :memberships, :clubs, :sponsors
 
+  def teardown
+    Comment.delete_all
+    Post.delete_all
+    Member.delete_all
+  end
+
   def test_eager_with_has_one_through_join_model_with_conditions_on_the_through
     member = Member.all.merge!(includes: :favorite_club).find(members(:some_other_guy).id)
     assert_nil member.favorite_club
@@ -1404,12 +1410,13 @@ class EagerAssociationTest < ActiveRecord::TestCase
   end
 
   test "has_many association ignores the scoping" do
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14198") if ENV['tidb'].present?
     comments = Post.find(1).comments.to_a
 
     Comment.where("1=0").scoping do
-      assert_equal comments, Post.find(1).comments
-      assert_equal comments, Post.preload(:comments).find(1).comments
-      assert_equal comments, Post.eager_load(:comments).find(1).comments
+      assert_equal comments, Post.find(1).comments.to_a
+      assert_equal comments, Post.preload(:comments).find(1).comments.to_a
+      assert_equal comments, Post.eager_load(:comments).find(1).comments.to_a
     end
   end
 

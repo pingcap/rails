@@ -1,5 +1,14 @@
 # Welcome to Rails
 
+## TiDB with ActiveRecord building status
+
+| TiDB         | ActiveRecord             | Build status                                                                                                                                                                       |
+|--------------|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| TiDB 5.1.0   | ActiveRecord 6-1-stable  | [![Build status](https://badge.buildkite.com/4d749353593a42a42491fa173b8d0cfc6743a02dd892e827e2.svg)](https://buildkite.com/hooopo/tidb-dot-5-1-dot-0-activerecord-dot-6-1-stable) |
+| TiDB nightly | ActiveRecord 6-1-stable  | [![Build status](https://badge.buildkite.com/a286ca7bdf2a031564e9c08ce671ba35a2dd9a1247a4986b3f.svg)](https://buildkite.com/hooopo/tidb-dot-nightly-activerecord-dot-6-1-stable)   |
+| TiDB 5.1.0   | ActiveRecord main branch | [![Build status](https://badge.buildkite.com/a19be43102534c997edfefda9051c462fa91e509abacf24d49.svg)](https://buildkite.com/hooopo/tidb-dot-5-1-dot-0-activerecord-dot-main)       |
+| TiDB nightly | ActiveRecord main branch | [![Build status](https://badge.buildkite.com/1f03803b248db844a88c9167c6a5939a574cd620186b61bba3.svg)](https://buildkite.com/hooopo/tidb-dot-nightly-activerecord-dot-main)         |
+
 ## What's Rails?
 
 Rails is a web-application framework that includes everything needed to

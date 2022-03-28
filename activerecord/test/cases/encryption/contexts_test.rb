@@ -7,6 +7,12 @@ require "models/post_encrypted"
 class ActiveRecord::Encryption::ContextsTest < ActiveRecord::EncryptionTestCase
   fixtures :posts
 
+  def teardown
+    EncryptedBook.delete_all
+    EncryptedPost.delete_all
+    EncryptedAuthor.delete_all
+  end
+
   setup do
     ActiveRecord::Encryption.config.support_unencrypted_data = true
 

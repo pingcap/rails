@@ -34,6 +34,7 @@ module ActiveRecord
     end
 
     test "deadlock correctly raises Deadlocked inside nested SavepointTransaction" do
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
       assert_raises(ActiveRecord::Deadlocked) do
         barrier = Concurrent::CyclicBarrier.new(2)
 

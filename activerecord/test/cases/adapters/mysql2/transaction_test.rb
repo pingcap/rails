@@ -89,63 +89,66 @@ module ActiveRecord
         end
       end
     end
+    if ENV['tidb'].blank?
+      test "raises StatementTimeout when statement timeout exceeded" do
+        skip unless ActiveRecord::Base.connection.show_variable("max_execution_time")
+        error = assert_raises(ActiveRecord::StatementTimeout) do
+          s = Sample.create!(value: 1)
+          latch1 = Concurrent::CountDownLatch.new
+          latch2 = Concurrent::CountDownLatch.new
 
-    test "raises StatementTimeout when statement timeout exceeded" do
-      skip unless ActiveRecord::Base.connection.show_variable("max_execution_time")
-      error = assert_raises(ActiveRecord::StatementTimeout) do
-        s = Sample.create!(value: 1)
-        latch1 = Concurrent::CountDownLatch.new
-        latch2 = Concurrent::CountDownLatch.new
+          thread = Thread.new do
+            Sample.transaction do
+              Sample.lock.find(s.id)
+              latch1.count_down
+              latch2.wait
+            end
+          end
 
-        thread = Thread.new do
-          Sample.transaction do
-            Sample.lock.find(s.id)
-            latch1.count_down
-            latch2.wait
+          begin
+            Sample.transaction do
+              latch1.wait
+              Sample.connection.execute("SET max_execution_time = 1")
+              Sample.lock.find(s.id)
+            end
+          ensure
+            Sample.connection.execute("SET max_execution_time = DEFAULT")
+            latch2.count_down
+            thread.join
           end
         end
-
-        begin
-          Sample.transaction do
-            latch1.wait
-            Sample.connection.execute("SET max_execution_time = 1")
-            Sample.lock.find(s.id)
-          end
-        ensure
-          Sample.connection.execute("SET max_execution_time = DEFAULT")
-          latch2.count_down
-          thread.join
-        end
+        assert_kind_of ActiveRecord::QueryAborted, error
       end
-      assert_kind_of ActiveRecord::QueryAborted, error
     end
+    if ENV['tidb'].blank?
+      # TODDO
+      test "raises QueryCanceled when canceling statement due to user request" do
+        error = assert_raises(ActiveRecord::QueryCanceled) do
+          s = Sample.create!(value: 1)
+          latch = Concurrent::CountDownLatch.new
 
-    test "raises QueryCanceled when canceling statement due to user request" do
-      error = assert_raises(ActiveRecord::QueryCanceled) do
-        s = Sample.create!(value: 1)
-        latch = Concurrent::CountDownLatch.new
+          thread = Thread.new do
+            Sample.transaction do
+              Sample.lock.find(s.id)
+              latch.count_down
+              sleep(0.5)
+              conn = Sample.connection
+              pid = conn.query_value("SELECT id FROM information_schema.processlist WHERE info LIKE '% FOR UPDATE'")
+              conn.execute("KILL QUERY #{pid}")
+            end
+          end
 
-        thread = Thread.new do
-          Sample.transaction do
-            Sample.lock.find(s.id)
-            latch.count_down
-            sleep(0.5)
-            conn = Sample.connection
-            pid = conn.query_value("SELECT id FROM information_schema.processlist WHERE info LIKE '% FOR UPDATE'")
-            conn.execute("KILL QUERY #{pid}")
+          begin
+            Sample.transaction do
+              latch.wait
+              Sample.lock.find(s.id)
+            end
+          ensure
+            thread.join
           end
         end
-
-        begin
-          Sample.transaction do
-            latch.wait
-            Sample.lock.find(s.id)
-          end
-        ensure
-          thread.join
-        end
+        assert_kind_of ActiveRecord::QueryAborted, error
       end
-      assert_kind_of ActiveRecord::QueryAborted, error
     end
   end
 end

@@ -49,6 +49,10 @@ class HasManyThroughAssociationsTest < ActiveRecord::TestCase
     Reader.create person_id: 0, post_id: 0
   end
 
+  def teardown
+    AuthorFavorite.delete_all
+  end
+
   def test_has_many_through_create_record
     assert books(:awdr).subscribers.create!(nick: "bob")
   end
@@ -898,6 +902,7 @@ class HasManyThroughAssociationsTest < ActiveRecord::TestCase
   end
 
   def test_has_many_association_through_a_belongs_to_association
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14198") if ENV['tidb'].present?
     author = authors(:mary)
     post = Post.create!(author: author, title: "TITLE", body: "BODY")
     author.author_favorites.create(favorite_author_id: 1)

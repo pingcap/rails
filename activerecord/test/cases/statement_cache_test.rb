@@ -13,6 +13,13 @@ module ActiveRecord
       @connection = ActiveRecord::Base.connection
     end
 
+    def teardown
+      Book.delete_all
+      Liquid.delete_all
+      Molecule.delete_all
+      @connection.execute("DELETE FROM birds")
+    end
+
     def test_statement_cache
       Book.create(name: "my book")
       Book.create(name: "my other book")
