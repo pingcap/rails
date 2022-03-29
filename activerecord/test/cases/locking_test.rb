@@ -742,6 +742,7 @@ unless in_memory_db?
     end
 
     def test_with_lock_configures_transaction
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
       person = Person.find 1
       Person.transaction do
         outer_transaction = Person.connection.transaction_manager.current_transaction
