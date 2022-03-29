@@ -23,6 +23,7 @@ class InsertAllTest < ActiveRecord::TestCase
 
   def teardown
     Arel::Table.engine = ActiveRecord::Base
+    Ship.delete_all
   end
 
   def test_insert
