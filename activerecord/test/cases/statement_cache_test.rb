@@ -11,6 +11,7 @@ module ActiveRecord
   class StatementCacheTest < ActiveRecord::TestCase
     def setup
       @connection = ActiveRecord::Base.connection
+      Liquid.delete_all
     end
 
     def teardown
