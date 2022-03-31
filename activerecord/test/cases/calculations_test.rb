@@ -26,6 +26,10 @@ require "support/stubs/strong_parameters"
 class CalculationsTest < ActiveRecord::TestCase
   fixtures :companies, :accounts, :authors, :author_addresses, :topics, :speedometers, :minivans, :books, :posts, :comments
   
+  def setup
+    ShipPart.delete_all
+  end
+
   def teardown
     Company.delete_all
     NumericData.delete_all
