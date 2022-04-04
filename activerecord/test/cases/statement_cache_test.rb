@@ -11,6 +11,7 @@ module ActiveRecord
   class StatementCacheTest < ActiveRecord::TestCase
     def setup
       @connection = ActiveRecord::Base.connection
+      Liquid.delete_all
     end
 
     def teardown
@@ -103,7 +104,7 @@ module ActiveRecord
       end
 
       additional_books = cache.execute([], Book.connection)
-      assert first_books != additional_books
+      assert_not_equal first_books, additional_books
     end
 
     def test_unprepared_statements_dont_share_a_cache_with_prepared_statements

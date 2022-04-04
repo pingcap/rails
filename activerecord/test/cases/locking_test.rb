@@ -706,9 +706,10 @@ unless in_memory_db?
     def test_lock_raises_when_the_record_is_dirty
       person = Person.find 1
       person.first_name = "fooman"
-      assert_raises(RuntimeError) do
+      error = assert_raises(RuntimeError) do
         person.lock!
       end
+      assert_match(/Changed attributes: "first_name"/, error.message)
     end
 
     def test_locking_in_after_save_callback
@@ -742,6 +743,7 @@ unless in_memory_db?
     end
 
     def test_with_lock_configures_transaction
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
       person = Person.find 1
       Person.transaction do
         outer_transaction = Person.connection.transaction_manager.current_transaction
