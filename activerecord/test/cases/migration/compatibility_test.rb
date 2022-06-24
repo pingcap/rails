@@ -29,7 +29,6 @@ module ActiveRecord
       end
 
       def test_migration_doesnt_remove_named_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :foo, name: "custom_index_name"
 
         migration = Class.new(ActiveRecord::Migration[4.2]) {
@@ -45,7 +44,6 @@ module ActiveRecord
       end
 
       def test_migration_does_remove_unnamed_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :bar
 
         migration = Class.new(ActiveRecord::Migration[4.2]) {
@@ -284,7 +282,6 @@ module ActiveRecord
         }.new
 
         ActiveRecord::Migrator.new(:up, [migration], @schema_migration).migrate
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         assert connection.index_exists?(:more_testings, [:widget_type, :widget_id], name: :index_more_testings_on_widget_type_and_widget_id)
         assert connection.index_exists?(:more_testings, [:gizmo_type, :gizmo_id], name: :index_more_testings_on_gizmo_type_and_gizmo_id)
       ensure
@@ -292,7 +289,6 @@ module ActiveRecord
       end
 
       def test_change_table_with_polymorphic_reference_uses_all_column_names_in_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         migration = Class.new(ActiveRecord::Migration[6.0]) {
           def migrate(x)
             change_table :testings do |t|
@@ -309,7 +305,6 @@ module ActiveRecord
       end
 
       def test_create_join_table_with_polymorphic_reference_uses_all_column_names_in_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         migration = Class.new(ActiveRecord::Migration[6.0]) {
           def migrate(x)
             create_join_table :more, :testings do |t|
@@ -328,7 +323,6 @@ module ActiveRecord
       end
 
       def test_polymorphic_add_reference_uses_all_column_names_in_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         migration = Class.new(ActiveRecord::Migration[6.0]) {
           def migrate(x)
             add_reference :testings, :widget, polymorphic: true, index: true

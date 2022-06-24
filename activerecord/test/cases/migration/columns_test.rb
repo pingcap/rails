@@ -94,7 +94,6 @@ module ActiveRecord
       end
 
       def test_rename_column_with_an_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         add_column "test_models", :hat_name, :string
         add_index :test_models, :hat_name
 
@@ -136,7 +135,6 @@ module ActiveRecord
       end
 
       def test_remove_column_with_multi_column_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         # MariaDB starting with 10.2.8
         # Dropping a column that is part of a multi-column UNIQUE constraint is not permitted.
         skip if current_adapter?(:Mysql2Adapter) && connection.mariadb? && connection.database_version >= "10.2.8"
@@ -305,7 +303,6 @@ module ActiveRecord
       end
 
       def test_column_with_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_table "my_table", force: true do |t|
           t.string :item_number, index: true
         end

@@ -84,7 +84,6 @@ module ActiveRecord
     end
 
     def test_indexes
-      skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
       idx_name = "accounts_idx"
 
       indexes = @connection.indexes("accounts")

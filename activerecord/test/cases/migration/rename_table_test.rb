@@ -50,7 +50,6 @@ module ActiveRecord
       end
 
       def test_rename_table_with_an_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         add_index :test_models, :url
 
         rename_table :test_models, :octopi

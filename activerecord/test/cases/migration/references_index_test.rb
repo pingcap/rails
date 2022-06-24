@@ -18,7 +18,6 @@ module ActiveRecord
       end
 
       def test_creates_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_table table_name do |t|
           t.references :foo, index: true
         end
@@ -27,7 +26,6 @@ module ActiveRecord
       end
 
       def test_creates_index_by_default_even_if_index_option_is_not_passed
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_table table_name do |t|
           t.references :foo
         end
@@ -44,7 +42,6 @@ module ActiveRecord
       end
 
       def test_creates_index_with_options
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_table table_name do |t|
           t.references :foo, index: { name: :index_testings_on_yo_momma }
           t.references :bar, index: { unique: true }
@@ -56,7 +53,6 @@ module ActiveRecord
 
       unless current_adapter? :OracleAdapter
         def test_creates_polymorphic_index
-          skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
           connection.create_table table_name do |t|
             t.references :foo, polymorphic: true, index: true
           end
@@ -65,7 +61,6 @@ module ActiveRecord
         end
 
         def test_creates_polymorphic_index_with_custom_name
-          skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
           connection.create_table table_name do |t|
             t.references :foo, polymorphic: true, index: { name: :testings_foo_index }
           end
@@ -75,7 +70,6 @@ module ActiveRecord
       end
 
       def test_creates_index_for_existing_table
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_table table_name
         connection.change_table table_name do |t|
           t.references :foo, index: true
@@ -85,7 +79,6 @@ module ActiveRecord
       end
 
       def test_creates_index_for_existing_table_even_if_index_option_is_not_passed
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_table table_name
         connection.change_table table_name do |t|
           t.references :foo
@@ -105,7 +98,6 @@ module ActiveRecord
 
       unless current_adapter? :OracleAdapter
         def test_creates_polymorphic_index_for_existing_table
-          skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
           connection.create_table table_name
           connection.change_table table_name do |t|
             t.references :foo, polymorphic: true, index: true
@@ -115,7 +107,6 @@ module ActiveRecord
         end
 
         def test_creates_polymorphic_index_for_existing_table_with_custom_name
-          skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
           connection.create_table table_name
           connection.change_table table_name do |t|
             t.references :foo, polymorphic: true, index: { name: :testings_foo_index }

@@ -45,13 +45,11 @@ module ActiveRecord
       end
 
       def test_create_reference_id_index_even_if_index_option_is_not_passed
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         add_reference table_name, :user
         assert index_exists?(table_name, :user_id)
       end
 
       def test_creates_polymorphic_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         add_reference table_name, :taggable, polymorphic: true, index: true
         assert index_exists?(table_name, [:taggable_type, :taggable_id])
       end
@@ -77,13 +75,11 @@ module ActiveRecord
       end
 
       def test_creates_named_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         add_reference table_name, :tag, index: { name: "index_taggings_on_tag_id" }
         assert index_exists?(table_name, :tag_id, name: "index_taggings_on_tag_id")
       end
 
       def test_creates_named_unique_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         add_reference table_name, :tag, index: { name: "index_taggings_on_tag_id", unique: true }
         assert index_exists?(table_name, :tag_id, name: "index_taggings_on_tag_id", unique: true)
       end
@@ -122,7 +118,6 @@ module ActiveRecord
       end
 
       def test_deletes_polymorphic_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         with_polymorphic_column do
           remove_reference table_name, :supplier, polymorphic: true
           assert_not index_exists?(table_name, [:supplier_id, :supplier_type])
