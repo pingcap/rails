@@ -244,7 +244,6 @@ module ActiveRecord
     end
 
     def test_exception_on_removing_index_without_column_option
-      skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
       index_definition = ["horses", [:name, :color]]
       migration1 = RemoveIndexMigration1.new
       migration1.migrate(:up)
@@ -495,7 +494,6 @@ module ActiveRecord
     end
 
     def test_migrate_revert_add_index_without_name_on_expression
-      skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
       InvertibleMigration.new.migrate(:up)
       RevertNonNamedExpressionIndexMigration.new.migrate(:up)
 

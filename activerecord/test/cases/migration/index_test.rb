@@ -82,7 +82,6 @@ module ActiveRecord
       end
 
       def test_add_index_which_already_exists_does_not_raise_error_with_option
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index(table_name, "foo")
 
         assert_nothing_raised do
@@ -105,7 +104,6 @@ module ActiveRecord
       end
 
       def test_remove_index_which_does_not_exist_doesnt_raise_with_option
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index(table_name, "foo")
 
         connection.remove_index(table_name, "foo")
@@ -120,7 +118,6 @@ module ActiveRecord
       end
 
       def test_remove_index_with_name_which_does_not_exist_doesnt_raise_with_option
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index(table_name, [:foo], name: "foo")
 
         assert connection.index_exists?(table_name, :foo, name: "foo")
@@ -139,7 +136,6 @@ module ActiveRecord
       end
 
       def test_index_symbol_names
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index table_name, :foo, name: :symbol_index_name
         assert connection.index_exists?(table_name, :foo, name: :symbol_index_name)
 
@@ -148,7 +144,6 @@ module ActiveRecord
       end
 
       def test_index_exists
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :foo
 
         assert connection.index_exists?(:testings, :foo)
@@ -156,35 +151,30 @@ module ActiveRecord
       end
 
       def test_index_exists_on_multiple_columns
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, [:foo, :bar]
 
         assert connection.index_exists?(:testings, [:foo, :bar])
       end
 
       def test_index_exists_with_custom_name_checks_columns
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, [:foo, :bar], name: "my_index"
         assert connection.index_exists?(:testings, [:foo, :bar], name: "my_index")
         assert_not connection.index_exists?(:testings, [:foo], name: "my_index")
       end
 
       def test_valid_index_options
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         assert_raise ArgumentError do
           connection.add_index :testings, :foo, unqiue: true
         end
       end
 
       def test_unique_index_exists
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :foo, unique: true
 
         assert connection.index_exists?(:testings, :foo, unique: true)
       end
 
       def test_named_index_exists
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :foo, name: "custom_index_name"
 
         assert connection.index_exists?(:testings, :foo)
@@ -193,7 +183,6 @@ module ActiveRecord
       end
 
       def test_remove_named_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, :foo, name: "index_testings_on_custom_index_name"
 
         assert connection.index_exists?(:testings, :foo)
@@ -205,14 +194,12 @@ module ActiveRecord
       end
 
       def test_add_index_attribute_length_limit
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index :testings, [:foo, :bar], length: { foo: 10, bar: nil }
 
         assert connection.index_exists?(:testings, [:foo, :bar])
       end
 
       def test_add_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.add_index("testings", "last_name")
         connection.remove_index("testings", "last_name")
 

@@ -73,7 +73,6 @@ module ActiveRecord
       end
 
       def test_create_join_table_with_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
         connection.create_join_table :artists, :musics do |t|
           t.index [:artist_id, :music_id]
         end
