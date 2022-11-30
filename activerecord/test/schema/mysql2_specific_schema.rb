@@ -64,7 +64,7 @@ ActiveRecord::Schema.define do
     t.binary :binary_column,    limit: 1
   end
 
-  if ENV['tidb']
+  if ENV["tidb"]
     puts "Skip PROCEDURE test"
   else
     execute "DROP PROCEDURE IF EXISTS ten"

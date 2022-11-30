@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "active_support/testing/strict_warnings"
 require "active_support"
 require "active_support/testing/autorun"
 require "active_support/testing/method_call_assertions"
@@ -20,7 +21,7 @@ module ActiveRecord
 
     self.fixture_path = FIXTURES_ROOT
     self.use_instantiated_fixtures = false
-    self.use_transactional_tests = ENV['tidb'].present? ? false : true
+    self.use_transactional_tests = ENV["tidb"].present? ? false : true
 
     def create_fixtures(*fixture_set_names, &block)
       ActiveRecord::FixtureSet.create_fixtures(ActiveRecord::TestCase.fixture_path, fixture_set_names, fixture_class_names, &block)
@@ -68,16 +69,13 @@ module ActiveRecord
     end
 
     def assert_column(model, column_name, msg = nil)
-      assert has_column?(model, column_name), msg
+      model.reset_column_information
+      assert_includes model.column_names, column_name.to_s, msg
     end
 
     def assert_no_column(model, column_name, msg = nil)
-      assert_not has_column?(model, column_name), msg
-    end
-
-    def has_column?(model, column_name)
       model.reset_column_information
-      model.column_names.include?(column_name.to_s)
+      assert_not_includes model.column_names, column_name.to_s, msg
     end
 
     def with_has_many_inversing(model = ActiveRecord::Base)

@@ -67,9 +67,16 @@ module ActiveSupport
     end
 
     # Run the supplied block as a work unit, reloading code as needed
-    def self.wrap
-      executor.wrap do
-        super
+    def self.wrap(**kwargs)
+      return yield if active?
+
+      executor.wrap(**kwargs) do
+        instance = run!
+        begin
+          yield
+        ensure
+          instance.complete!
+        end
       end
     end
 

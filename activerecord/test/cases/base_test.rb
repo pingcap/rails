@@ -66,6 +66,24 @@ class ReadonlyTitlePost < Post
   attr_readonly :title
 end
 
+class ReadonlyTitleAbstractPost < ActiveRecord::Base
+  self.abstract_class = true
+
+  attr_readonly :title
+end
+
+class ReadonlyTitlePostWithAbstractParent < ReadonlyTitleAbstractPost
+  self.table_name = "posts"
+end
+
+previous_value, ActiveRecord.raise_on_assign_to_attr_readonly = ActiveRecord.raise_on_assign_to_attr_readonly, false
+
+class NonRaisingPost < Post
+  attr_readonly :title
+end
+
+ActiveRecord.raise_on_assign_to_attr_readonly = previous_value
+
 class Weird < ActiveRecord::Base; end
 
 class LintTest < ActiveRecord::TestCase
@@ -98,7 +116,7 @@ class BasicsTest < ActiveRecord::TestCase
 
   def test_incomplete_schema_loading
     topic = Topic.first
-    payload = { foo: 42 }
+    payload = { "foo" => 42 }
     topic.update!(content: payload)
 
     Topic.reset_column_information
@@ -691,16 +709,139 @@ class BasicsTest < ActiveRecord::TestCase
   end
 
   def test_readonly_attributes
-    assert_equal Set.new([ "title", "comments_count" ]), ReadonlyTitlePost.readonly_attributes
+    assert_equal [ "title" ], ReadonlyTitlePost.readonly_attributes
 
     post = ReadonlyTitlePost.create(title: "cannot change this", body: "changeable")
-    post.reload
     assert_equal "cannot change this", post.title
+    assert_equal "changeable", post.body
 
-    post.update(title: "try to change", body: "changed")
+    post = Post.find(post.id)
+    assert_equal "cannot change this", post.title
+    assert_equal "changeable", post.body
+
+    assert_raises(ActiveRecord::ReadonlyAttributeError) do
+      post.title = "changed via assignment"
+    end
+    post.body = "changed via assignment"
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via assignment", post.body
+
+    assert_raises(ActiveRecord::ReadonlyAttributeError) do
+      post.write_attribute(:title, "changed via write_attribute")
+    end
+    post.write_attribute(:body, "changed via write_attribute")
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via write_attribute", post.body
+
+    assert_raises(ActiveRecord::ReadonlyAttributeError) do
+      post.assign_attributes(body: "changed via assign_attributes", title: "changed via assign_attributes")
+    end
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via assign_attributes", post.body
+
+    assert_raises(ActiveRecord::ReadonlyAttributeError) do
+      post.update(title: "changed via update", body: "changed via update")
+    end
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via assign_attributes", post.body
+
+    assert_raises(ActiveRecord::ReadonlyAttributeError) do
+      post[:title] = "changed via []="
+    end
+    post[:body] = "changed via []="
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via []=", post.body
+
+    post.save!
+
+    post = Post.find(post.id)
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via []=", post.body
+  end
+
+  def test_readonly_attributes_on_a_new_record
+    assert_equal [ "title" ], ReadonlyTitlePost.readonly_attributes
+
+    post = ReadonlyTitlePost.new(title: "can change this until you save", body: "changeable")
+    assert_equal "can change this until you save", post.title
+    assert_equal "changeable", post.body
+
+    post.title = "changed via assignment"
+    post.body = "changed via assignment"
+    assert_equal "changed via assignment", post.title
+    assert_equal "changed via assignment", post.body
+
+    post.write_attribute(:title, "changed via write_attribute")
+    post.write_attribute(:body, "changed via write_attribute")
+    assert_equal "changed via write_attribute", post.title
+    assert_equal "changed via write_attribute", post.body
+
+    post.assign_attributes(body: "changed via assign_attributes", title: "changed via assign_attributes")
+    assert_equal "changed via assign_attributes", post.title
+    assert_equal "changed via assign_attributes", post.body
+
+    post[:title] = "changed via []="
+    post[:body] = "changed via []="
+    assert_equal "changed via []=", post.title
+    assert_equal "changed via []=", post.body
+
+    post.save!
+
+    post = Post.find(post.id)
+    assert_equal "changed via []=", post.title
+    assert_equal "changed via []=", post.body
+  end
+
+  def test_readonly_attributes_in_abstract_class_descendant
+    assert_equal [ "title" ], ReadonlyTitlePostWithAbstractParent.readonly_attributes
+
+    assert_nothing_raised do
+      ReadonlyTitlePostWithAbstractParent.new(title: "can change this until you save")
+    end
+  end
+
+  def test_readonly_attributes_when_configured_to_not_raise
+    assert_equal [ "title" ], NonRaisingPost.readonly_attributes
+
+    post = NonRaisingPost.create(title: "cannot change this", body: "changeable")
+    assert_equal "cannot change this", post.title
+    assert_equal "changeable", post.body
+
+    post = Post.find(post.id)
+    assert_equal "cannot change this", post.title
+    assert_equal "changeable", post.body
+
+    post.title = "changed via assignment"
+    post.body = "changed via assignment"
+    post.save!
     post.reload
     assert_equal "cannot change this", post.title
-    assert_equal "changed", post.body
+    assert_equal "changed via assignment", post.body
+
+    post.write_attribute(:title, "changed via write_attribute")
+    post.write_attribute(:body, "changed via write_attribute")
+    post.save!
+    post.reload
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via write_attribute", post.body
+
+    post.assign_attributes(body: "changed via assign_attributes", title: "changed via assign_attributes")
+    post.save!
+    post.reload
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via assign_attributes", post.body
+
+    post.update(title: "changed via update", body: "changed via update")
+    post.reload
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via update", post.body
+
+    post[:title] = "changed via []="
+    post[:body] = "changed via []="
+    post.save!
+    post.reload
+    assert_equal "cannot change this", post.title
+    assert_equal "changed via []=", post.body
   end
 
   def test_unicode_column_name
@@ -847,9 +988,10 @@ class BasicsTest < ActiveRecord::TestCase
     assert_not_predicate dup, :persisted?
 
     # test if the attributes have been duped
-    original_amount = dup.salary.amount
-    dev.salary.amount = 1
-    assert_equal original_amount, dup.salary.amount
+    salary = DeveloperSalary.new(42)
+    dup.salary = salary
+    salary.amount = 1
+    assert_equal 42, dup.salary.amount
 
     assert dup.save
     assert_predicate dup, :persisted?
@@ -1350,7 +1492,7 @@ class BasicsTest < ActiveRecord::TestCase
       rd.binmode
       wr.binmode
 
-      ActiveRecord::Base.connection_handler.clear_all_connections!
+      ActiveRecord::Base.connection_handler.clear_all_connections!(:all)
 
       fork do
         rd.close
@@ -1460,6 +1602,13 @@ class BasicsTest < ActiveRecord::TestCase
     topic = Topic.instantiate(attrs, types)
 
     assert_equal "t.lo", topic.author_name
+  end
+
+  if current_adapter?(:PostgreSQLAdapter)
+    def test_column_types_on_queries_on_postgresql
+      result = ActiveRecord::Base.connection.exec_query("SELECT 1 AS test")
+      assert_equal ActiveModel::Type::Integer, result.column_types["test"].class
+    end
   end
 
   def test_typecasting_aliases
@@ -1657,26 +1806,26 @@ class BasicsTest < ActiveRecord::TestCase
     ActiveRecord::Base.protected_environments = previous_protected_environments
   end
 
+  test "#present? and #blank? on ActiveRecord::Base classes" do
+    assert_not_empty Topic.all
+    assert_no_queries do
+      assert Topic.present?
+      assert_not Topic.blank?
+    end
+
+    Topic.delete_all
+    assert_no_queries do
+      assert Topic.present?
+      assert_not Topic.blank?
+    end
+  end
+
   test "cannot call connects_to on non-abstract or non-ActiveRecord::Base classes" do
     error = assert_raises(NotImplementedError) do
       Bird.connects_to(database: { writing: :arunit })
     end
 
     assert_equal "`connects_to` can only be called on ActiveRecord::Base or abstract classes", error.message
-  end
-
-  test "cannot call connected_to on subclasses of ActiveRecord::Base with legacy connection handling" do
-    old_value = ActiveRecord.legacy_connection_handling
-    ActiveRecord.legacy_connection_handling = true
-
-    error = assert_raises(NotImplementedError) do
-      Bird.connected_to(role: :reading) { }
-    end
-
-    assert_equal "`connected_to` can only be called on ActiveRecord::Base with legacy connection handling.", error.message
-  ensure
-    clean_up_legacy_connection_handlers
-    ActiveRecord.legacy_connection_handling = old_value
   end
 
   test "cannot call connected_to with role and shard on non-abstract classes" do
@@ -1725,28 +1874,6 @@ class BasicsTest < ActiveRecord::TestCase
     assert SecondAbstractClass.current_preventing_writes
   ensure
     ActiveRecord::Base.connected_to_stack.pop
-  end
-
-  test "#connecting_to doesn't work with legacy connection handling" do
-    old_value = ActiveRecord.legacy_connection_handling
-    ActiveRecord.legacy_connection_handling = true
-
-    assert_raises NotImplementedError do
-      SecondAbstractClass.connecting_to(role: :writing, prevent_writes: true)
-    end
-  ensure
-    ActiveRecord.legacy_connection_handling = old_value
-  end
-
-  test "#connected_to_many doesn't work with legacy connection handling" do
-    old_value = ActiveRecord.legacy_connection_handling
-    ActiveRecord.legacy_connection_handling = true
-
-    assert_raises NotImplementedError do
-      ActiveRecord::Base.connected_to_many([SecondAbstractClass], role: :writing)
-    end
-  ensure
-    ActiveRecord.legacy_connection_handling = old_value
   end
 
   test "#connected_to_many cannot be called on anything but ActiveRecord::Base" do

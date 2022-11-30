@@ -71,7 +71,7 @@ class MemCacheStoreTest < ActionDispatch::IntegrationTest
         get "/set_session_value"
         assert_response :success
         assert cookies["_session_id"]
-        session_cookie = cookies.send(:hash_for)["_session_id"]
+        session_cookie = cookies.get_cookie("_session_id")
 
         get "/call_reset_session"
         assert_response :success
@@ -190,7 +190,7 @@ class MemCacheStoreTest < ActionDispatch::IntegrationTest
     def with_test_route_set
       with_routing do |set|
         set.draw do
-          ActiveSupport::Deprecation.silence do
+          ActionDispatch.deprecator.silence do
             get ":action", to: ::MemCacheStoreTest::TestController
           end
         end

@@ -768,12 +768,12 @@ class HasManyThroughAssociationsTest < ActiveRecord::TestCase
       firm = companies(:first_firm)
       lifo = Developer.new(name: "lifo")
       assert_raises(ActiveRecord::RecordInvalid) do
-        assert_deprecated { firm.developers << lifo }
+        assert_deprecated(ActiveRecord.deprecator) { firm.developers << lifo }
       end
 
       lifo = Developer.create!(name: "lifo")
       assert_raises(ActiveRecord::RecordInvalid) do
-        assert_deprecated { firm.developers << lifo }
+        assert_deprecated(ActiveRecord.deprecator) { firm.developers << lifo }
       end
     end
   end
@@ -896,13 +896,23 @@ class HasManyThroughAssociationsTest < ActiveRecord::TestCase
     end
   end
 
+  def test_has_many_through_uses_the_through_model_to_create_transactions
+    post   = posts(:thinking)
+    person = people(:david)
+    other_person = people(:michael)
+
+    assert_called(Reader, :transaction) do
+      post.people = [person, other_person]
+    end
+  end
+
   def test_has_many_association_through_a_belongs_to_association_where_the_association_doesnt_exist
     post = Post.create!(title: "TITLE", body: "BODY")
     assert_equal [], post.author_favorites
   end
 
   def test_has_many_association_through_a_belongs_to_association
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14198") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14198") if ENV["tidb"].present?
     author = authors(:mary)
     post = Post.create!(author: author, title: "TITLE", body: "BODY")
     author.author_favorites.create(favorite_author_id: 1)

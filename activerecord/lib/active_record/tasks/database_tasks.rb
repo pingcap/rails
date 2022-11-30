@@ -140,15 +140,7 @@ module ActiveRecord
       def setup_initial_database_yaml
         return {} unless defined?(Rails)
 
-        begin
-          Rails.application.config.load_database_yaml
-        rescue
-          unless ActiveRecord.suppress_multiple_database_warning
-            $stderr.puts "Rails couldn't infer whether you are using multiple databases from your database.yml and can't generate the tasks for the non-primary databases. If you'd like to use this feature, please simplify your ERB."
-          end
-
-          {}
-        end
+        Rails.application.config.load_database_yaml
       end
 
       def for_each(databases)
@@ -186,36 +178,35 @@ module ActiveRecord
       end
 
       def prepare_all
+        seed = false
+
         each_current_configuration(env) do |db_config|
-          seed = false
           ActiveRecord::Base.establish_connection(db_config)
 
           begin
-            # Skipped when no database
-            migrate
-
-            if ActiveRecord.dump_schema_after_migration
-              dump_schema(db_config, ActiveRecord.schema_format)
-            end
+            database_initialized = ActiveRecord::Base.connection.schema_migration.table_exists?
           rescue ActiveRecord::NoDatabaseError
             create(db_config)
+            retry
+          end
 
+          unless database_initialized
             if File.exist?(schema_dump_path(db_config))
               load_schema(
                 db_config,
                 ActiveRecord.schema_format,
                 nil
               )
-            else
-              migrate
             end
-
             seed = true
           end
 
-          ActiveRecord::Base.establish_connection
-          load_seed if seed
+          migrate
+          dump_schema(db_config) if ActiveRecord.dump_schema_after_migration
         end
+
+        ActiveRecord::Base.establish_connection
+        load_seed if seed
       end
 
       def drop(configuration, *arguments)
@@ -253,10 +244,10 @@ module ActiveRecord
       end
 
       def migrate(version = nil)
-        check_target_version
-
         scope = ENV["SCOPE"]
         verbose_was, Migration.verbose = Migration.verbose, verbose?
+
+        check_target_version
 
         Base.connection.migration_context.migrate(target_version) do |migration|
           if version.blank?
@@ -365,10 +356,12 @@ module ActiveRecord
 
       def load_schema(db_config, format = ActiveRecord.schema_format, file = nil) # :nodoc:
         file ||= schema_dump_path(db_config, format)
+        return unless file
 
         verbose_was, Migration.verbose = Migration.verbose, verbose? && ENV["VERBOSE"]
         check_schema_file(file)
         ActiveRecord::Base.establish_connection(db_config)
+        connection = ActiveRecord::Base.connection
 
         case format
         when :ruby
@@ -378,32 +371,35 @@ module ActiveRecord
         else
           raise ArgumentError, "unknown format #{format.inspect}"
         end
-        ActiveRecord::InternalMetadata.create_table
-        ActiveRecord::InternalMetadata[:environment] = db_config.env_name
-        ActiveRecord::InternalMetadata[:schema_sha1] = schema_sha1(file)
+
+        connection.internal_metadata.create_table_and_set_flags(db_config.env_name, schema_sha1(file))
       ensure
         Migration.verbose = verbose_was
       end
 
       def schema_up_to_date?(configuration, format = ActiveRecord.schema_format, file = nil)
+        original_db_config = ActiveRecord::Base.connection_db_config
         db_config = resolve_configuration(configuration)
 
         file ||= schema_dump_path(db_config)
 
-        return true unless File.exist?(file)
+        return true unless file && File.exist?(file)
 
         ActiveRecord::Base.establish_connection(db_config)
+        connection = ActiveRecord::Base.connection
 
-        return false unless ActiveRecord::InternalMetadata.enabled?
-        return false unless ActiveRecord::InternalMetadata.table_exists?
+        return false unless connection.internal_metadata.enabled?
+        return false unless connection.internal_metadata.table_exists?
 
-        ActiveRecord::InternalMetadata[:schema_sha1] == schema_sha1(file)
+        connection.internal_metadata[:schema_sha1] == schema_sha1(file)
+      ensure
+        ActiveRecord::Base.establish_connection(original_db_config)
       end
 
       def reconstruct_from_schema(db_config, format = ActiveRecord.schema_format, file = nil) # :nodoc:
         file ||= schema_dump_path(db_config, format)
 
-        check_schema_file(file)
+        check_schema_file(file) if file
 
         ActiveRecord::Base.establish_connection(db_config)
 
@@ -421,6 +417,8 @@ module ActiveRecord
       def dump_schema(db_config, format = ActiveRecord.schema_format) # :nodoc:
         require "active_record/schema_dumper"
         filename = schema_dump_path(db_config, format)
+        return unless filename
+
         connection = ActiveRecord::Base.connection
 
         FileUtils.mkdir_p(db_dir)
@@ -448,7 +446,7 @@ module ActiveRecord
           "structure.sql"
         end
       end
-      deprecate :schema_file_type
+      deprecate :schema_file_type, deprecator: ActiveRecord.deprecator
 
       def schema_dump_path(db_config, format = ActiveRecord.schema_format)
         return ENV["SCHEMA"] if ENV["SCHEMA"]

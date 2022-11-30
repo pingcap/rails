@@ -24,14 +24,22 @@ module ActiveRecord
         # Returns a scope for the model without the previously set scopes.
         #
         #   class Post < ActiveRecord::Base
+        #     belongs_to :user
+        #
         #     def self.default_scope
         #       where(published: true)
         #     end
         #   end
         #
+        #   class User < ActiveRecord::Base
+        #     has_many :posts
+        #   end
+        #
         #   Post.all                                  # Fires "SELECT * FROM posts WHERE published = true"
         #   Post.unscoped.all                         # Fires "SELECT * FROM posts"
         #   Post.where(published: false).unscoped.all # Fires "SELECT * FROM posts"
+        #   User.find(1).posts                        # Fires "SELECT * FROM posts WHERE published = true AND posts.user_id = 1"
+        #   User.find(1).posts.unscoped               # Fires "SELECT * FROM posts"
         #
         # This method also accepts a block. All queries inside the block will
         # not use the previously set scopes.
@@ -146,11 +154,13 @@ module ActiveRecord
               end
             elsif default_scopes.any?
               evaluate_default_scope do
-                default_scopes.inject(relation) do |default_scope, scope_obj|
+                default_scopes.inject(relation) do |combined_scope, scope_obj|
                   if execute_scope?(all_queries, scope_obj)
                     scope = scope_obj.scope.respond_to?(:to_proc) ? scope_obj.scope : scope_obj.scope.method(:call)
 
-                    default_scope.instance_exec(&scope) || default_scope
+                    combined_scope.instance_exec(&scope) || combined_scope
+                  else
+                    combined_scope
                   end
                 end
               end

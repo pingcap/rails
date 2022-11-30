@@ -32,8 +32,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
 
   def test_no_automatic_reconnection_after_timeout
     assert_predicate @connection, :active?
-    @connection.update("set @@wait_timeout=1")
-    sleep 2
+    cause_server_side_disconnect
     assert_not_predicate @connection, :active?
   ensure
     # Repair all fixture connections so other tests won't break.
@@ -42,35 +41,28 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
 
   def test_successful_reconnection_after_timeout_with_manual_reconnect
     assert_predicate @connection, :active?
-    @connection.update("set @@wait_timeout=1")
-    sleep 2
+    cause_server_side_disconnect
     @connection.reconnect!
     assert_predicate @connection, :active?
   end
 
   def test_successful_reconnection_after_timeout_with_verify
     assert_predicate @connection, :active?
-    @connection.update("set @@wait_timeout=1")
-    sleep 2
+    cause_server_side_disconnect
     @connection.verify!
     assert_predicate @connection, :active?
   end
 
-  def test_execute_after_disconnect
+  def test_execute_after_disconnect_reconnects
     @connection.disconnect!
 
-    error = assert_raise(ActiveRecord::ConnectionNotEstablished) do
-      @connection.execute("SELECT 1")
-    end
-    assert_kind_of Mysql2::Error, error.cause
+    assert_equal 3, @connection.select_value("SELECT 1+2")
   end
 
-  def test_quote_after_disconnect
+  def test_quote_after_disconnect_reconnects
     @connection.disconnect!
 
-    assert_raise(ActiveRecord::ConnectionNotEstablished) do
-      @connection.quote("string")
-    end
+    assert_equal "'string'", @connection.quote("string")
   end
 
   def test_active_after_disconnect
@@ -95,7 +87,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_character_set_connection_is_configured
-    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/character-set-and-collation#character-set-and-collation") if ENV['tidb'].present?
+    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/character-set-and-collation#character-set-and-collation") if ENV["tidb"].present?
     run_without_connection do |orig_connection|
       configuration_hash = orig_connection.except(:encoding, :collation)
       ActiveRecord::Base.establish_connection(configuration_hash.merge!(encoding: "cp932"))
@@ -112,7 +104,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_collation_connection_is_configured
-    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/character-set-and-collation#character-set-and-collation") if ENV['tidb'].present?
+    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/character-set-and-collation#character-set-and-collation") if ENV["tidb"].present?
     assert_equal "utf8mb4_unicode_ci", @connection.show_variable("collation_connection")
     assert_equal 1, @connection.query_value("SELECT 'こんにちは' = 'コンニチハ'")
 
@@ -202,7 +194,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_get_and_release_advisory_lock
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV["tidb"].present?
     lock_name = "test lock'n'name"
 
     got_lock = @connection.get_advisory_lock(lock_name)
@@ -218,7 +210,7 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_release_non_existent_advisory_lock
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/14994") if ENV["tidb"].present?
     lock_name = "fake lock'n'name"
     released_non_existent_lock = @connection.release_advisory_lock(lock_name)
     assert_equal released_non_existent_lock, false,
@@ -226,6 +218,11 @@ class Mysql2ConnectionTest < ActiveRecord::Mysql2TestCase
   end
 
   private
+    def cause_server_side_disconnect
+      @connection.update("set @@wait_timeout=1")
+      sleep 2
+    end
+
     def test_lock_free(lock_name)
       @connection.select_value("SELECT IS_FREE_LOCK(#{@connection.quote(lock_name)})") == 1
     end

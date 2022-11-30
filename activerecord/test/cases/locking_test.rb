@@ -455,13 +455,15 @@ class OptimisticLockingTest < ActiveRecord::TestCase
   end
 
   def test_readonly_attributes
-    assert_equal Set.new([ "name" ]), ReadonlyNameShip.readonly_attributes
+    assert_equal [ "name" ], ReadonlyNameShip.readonly_attributes
 
     s = ReadonlyNameShip.create(name: "unchangeable name")
     s.reload
     assert_equal "unchangeable name", s.name
 
-    s.update(name: "changed name")
+    assert_raises(ActiveRecord::ReadonlyAttributeError) do
+      s.update(name: "changed name")
+    end
     s.reload
     assert_equal "unchangeable name", s.name
   end
@@ -716,7 +718,7 @@ unless in_memory_db?
       assert_nothing_raised do
         frog = ::Frog.create(name: "Old Frog")
         frog.name = "New Frog"
-        assert_not_deprecated do
+        assert_not_deprecated(ActiveRecord.deprecator) do
           frog.save!
         end
       end
@@ -743,7 +745,7 @@ unless in_memory_db?
     end
 
     def test_with_lock_configures_transaction
-      skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
+      skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV["tidb"].present?
       person = Person.find 1
       Person.transaction do
         outer_transaction = Person.connection.transaction_manager.current_transaction

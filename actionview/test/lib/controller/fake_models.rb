@@ -164,6 +164,17 @@ class HashBackedAuthor < Hash
   end
 end
 
+class HashWithIndifferentAccessBackedAuthor < HashWithIndifferentAccess
+  extend ActiveModel::Naming
+  include ActiveModel::Conversion
+
+  def persisted?; false; end
+
+  def name
+    "hash backed author"
+  end
+end
+
 module Blog
   def self.use_relative_model_naming?
     true
@@ -193,9 +204,12 @@ Car = Struct.new(:color)
 
 class Plane
   attr_reader :to_key
+  delegate :model_name, to: :class
 
-  def model_name
-    OpenStruct.new param_key: "airplane"
+  class << self
+    def model_name
+      OpenStruct.new param_key: "airplane"
+    end
   end
 
   def save

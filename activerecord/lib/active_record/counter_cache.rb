@@ -5,6 +5,10 @@ module ActiveRecord
   module CounterCache
     extend ActiveSupport::Concern
 
+    included do
+      class_attribute :_counter_cache_columns, instance_accessor: false, default: []
+    end
+
     module ClassMethods
       # Resets one or more counter caches to their correct value using an SQL
       # count query. This is useful when adding new counter caches, or if the
@@ -48,7 +52,9 @@ module ActiveRecord
           reflection   = child_class._reflections.values.find { |e| e.belongs_to? && e.foreign_key.to_s == foreign_key && e.options[:counter_cache].present? }
           counter_name = reflection.counter_cache_column
 
-          updates[counter_name] = object.send(counter_association).count(:all)
+          count_was = object.send(counter_name)
+          count = object.send(counter_association).count(:all)
+          updates[counter_name] = count if count != count_was
         end
 
         if touch
@@ -59,7 +65,7 @@ module ActiveRecord
           updates.merge!(touch_updates)
         end
 
-        unscoped.where(primary_key => object.id).update_all(updates)
+        unscoped.where(primary_key => object.id).update_all(updates) if updates.any?
 
         true
       end
@@ -159,6 +165,10 @@ module ActiveRecord
       #   DiscussionBoard.decrement_counter(:posts_count, 5, touch: true)
       def decrement_counter(counter_name, id, touch: nil)
         update_counters(id, counter_name => -1, touch: touch)
+      end
+
+      def counter_cache_column?(name) # :nodoc:
+        _counter_cache_columns.include?(name)
       end
     end
 

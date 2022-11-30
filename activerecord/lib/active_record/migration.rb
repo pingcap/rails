@@ -143,22 +143,24 @@ module ActiveRecord
       end
     end
 
-    def initialize(message = nil)
-      super(message || detailed_migration_message)
+    def initialize(message = nil, pending_migrations: nil)
+      if pending_migrations.nil?
+        pending_migrations = ActiveRecord::Base.connection.migration_context.open.pending_migrations
+      end
+
+      super(message || detailed_migration_message(pending_migrations))
     end
 
     private
-      def detailed_migration_message
+      def detailed_migration_message(pending_migrations)
         message = "Migrations are pending. To resolve this issue, run:\n\n        bin/rails db:migrate"
-        message += " RAILS_ENV=#{::Rails.env}" if defined?(Rails.env)
+        message += " RAILS_ENV=#{::Rails.env}" if defined?(Rails.env) && !(Rails.env.development? || Rails.env.test?)
         message += "\n\n"
-
-        pending_migrations = ActiveRecord::Base.connection.migration_context.open.pending_migrations
 
         message += "You have #{pending_migrations.size} pending #{pending_migrations.size > 1 ? 'migrations:' : 'migration:'}\n\n"
 
         pending_migrations.each do |pending_migration|
-          message += "#{pending_migration.basename}\n"
+          message += "#{pending_migration.filename}\n"
         end
 
         message
@@ -548,9 +550,14 @@ module ActiveRecord
     autoload :CommandRecorder, "active_record/migration/command_recorder"
     autoload :Compatibility, "active_record/migration/compatibility"
     autoload :JoinTable, "active_record/migration/join_table"
+    autoload :ExecutionStrategy, "active_record/migration/execution_strategy"
+    autoload :DefaultStrategy, "active_record/migration/default_strategy"
 
     # This must be defined before the inherited hook, below
     class Current < Migration # :nodoc:
+      def compatible_table_definition(t)
+        t
+      end
     end
 
     def self.inherited(subclass) # :nodoc:
@@ -596,7 +603,7 @@ module ActiveRecord
         @mutex.synchronize do
           @watcher ||= build_watcher do
             @needs_check = true
-            ActiveRecord::Migration.check_pending!(connection)
+            ActiveRecord::Migration.check_pending_migrations
             @needs_check = false
           end
 
@@ -612,12 +619,10 @@ module ActiveRecord
 
       private
         def build_watcher(&block)
-          paths = Array(connection.migration_context.migrations_paths)
+          current_environment = ActiveRecord::ConnectionHandling::DEFAULT_ENV.call
+          all_configs = ActiveRecord::Base.configurations.configs_for(env_name: current_environment)
+          paths = all_configs.flat_map { |config| config.migrations_paths || Migrator.migrations_paths }.uniq
           @file_watcher.new([], paths.index_with(["rb"]), &block)
-        end
-
-        def connection
-          ActiveRecord::Base.connection
         end
     end
 
@@ -631,30 +636,22 @@ module ActiveRecord
 
       # Raises <tt>ActiveRecord::PendingMigrationError</tt> error if any migrations are pending.
       def check_pending!(connection = Base.connection)
-        raise ActiveRecord::PendingMigrationError if connection.migration_context.needs_migration?
+        if pending_migrations = connection.migration_context.pending_migrations
+          raise ActiveRecord::PendingMigrationError.new(pending_migrations: pending_migrations)
+        end
       end
 
       def load_schema_if_pending!
-        current_db_config = Base.connection_db_config
-        all_configs = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env)
-
-        needs_update = !all_configs.all? do |db_config|
-          Tasks::DatabaseTasks.schema_up_to_date?(db_config, ActiveRecord.schema_format)
-        end
-
-        if needs_update
+        if any_schema_needs_update?
           # Roundtrip to Rake to allow plugins to hook into database initialization.
           root = defined?(ENGINE_ROOT) ? ENGINE_ROOT : Rails.root
           FileUtils.cd(root) do
-            Base.clear_all_connections!
+            Base.connection_handler.clear_all_connections!(:all)
             system("bin/rails db:test:prepare")
           end
         end
 
-        # Establish a new connection, the old database may be gone (db:test:prepare uses purge)
-        Base.establish_connection(current_db_config)
-
-        check_pending!
+        check_pending_migrations
       end
 
       def maintain_test_schema! # :nodoc:
@@ -679,6 +676,42 @@ module ActiveRecord
       def disable_ddl_transaction!
         @disable_ddl_transaction = true
       end
+
+      def check_pending_migrations # :nodoc:
+        migrations = pending_migrations
+
+        if migrations.any?
+          raise ActiveRecord::PendingMigrationError.new(pending_migrations: migrations)
+        end
+      end
+
+      private
+        def any_schema_needs_update?
+          !db_configs_in_current_env.all? do |db_config|
+            Tasks::DatabaseTasks.schema_up_to_date?(db_config, ActiveRecord.schema_format)
+          end
+        end
+
+        def pending_migrations
+          prev_db_config = Base.connection_db_config
+          pending_migrations = []
+
+          db_configs_in_current_env.each do |db_config|
+            conn = Base.establish_connection(db_config).connection
+            if pending = conn.migration_context.open.pending_migrations
+              pending_migrations << pending
+            end
+          end
+
+          pending_migrations.flatten
+        ensure
+          Base.establish_connection(prev_db_config)
+        end
+
+        def db_configs_in_current_env
+          current_environment = ActiveRecord::ConnectionHandling::DEFAULT_ENV.call
+          ActiveRecord::Base.configurations.configs_for(env_name: current_environment)
+        end
     end
 
     def disable_ddl_transaction # :nodoc:
@@ -692,6 +725,10 @@ module ActiveRecord
       @name       = name
       @version    = version
       @connection = nil
+    end
+
+    def execution_strategy
+      @execution_strategy ||= ActiveRecord.migration_strategy.new(self)
     end
 
     self.verbose = true
@@ -881,6 +918,7 @@ module ActiveRecord
       end
     ensure
       @connection = nil
+      @execution_strategy = nil
     end
 
     def write(text = "")
@@ -935,22 +973,23 @@ module ActiveRecord
             end
           end
         end
-        return super unless connection.respond_to?(method)
-        connection.send(method, *arguments, &block)
+        return super unless execution_strategy.respond_to?(method)
+        execution_strategy.send(method, *arguments, &block)
       end
     end
     ruby2_keywords(:method_missing)
 
     def copy(destination, sources, options = {})
       copied = []
-      schema_migration = options[:schema_migration] || ActiveRecord::SchemaMigration
 
       FileUtils.mkdir_p(destination) unless File.exist?(destination)
+      schema_migration = SchemaMigration::NullSchemaMigration.new
+      internal_metadata = InternalMetadata::NullInternalMetadata.new
 
-      destination_migrations = ActiveRecord::MigrationContext.new(destination, schema_migration).migrations
+      destination_migrations = ActiveRecord::MigrationContext.new(destination, schema_migration, internal_metadata).migrations
       last = destination_migrations.last
       sources.each do |scope, path|
-        source_migrations = ActiveRecord::MigrationContext.new(path, schema_migration).migrations
+        source_migrations = ActiveRecord::MigrationContext.new(path, schema_migration, internal_metadata).migrations
 
         source_migrations.each do |migration|
           source = File.binread(migration.filename)
@@ -1011,7 +1050,7 @@ module ActiveRecord
       if ActiveRecord.timestamped_migrations
         [Time.now.utc.strftime("%Y%m%d%H%M%S"), "%.14d" % number].max
       else
-        SchemaMigration.normalize_migration_number(number)
+        "%.3d" % number.to_i
       end
     end
 
@@ -1069,15 +1108,38 @@ module ActiveRecord
   #
   # A migration context requires the path to the migrations is set
   # in the +migrations_paths+ parameter. Optionally a +schema_migration+
-  # class can be provided. For most applications, +SchemaMigration+ is
-  # sufficient. Multiple database applications need a +SchemaMigration+
-  # per primary database.
+  # class can be provided. Multiple database applications will instantiate
+  # a +SchemaMigration+ object per database. From the Rake tasks, Rails will
+  # handle this for you.
   class MigrationContext
-    attr_reader :migrations_paths, :schema_migration
+    attr_reader :migrations_paths, :schema_migration, :internal_metadata
 
-    def initialize(migrations_paths, schema_migration = SchemaMigration)
+    def initialize(migrations_paths, schema_migration = nil, internal_metadata = nil)
+      if schema_migration == SchemaMigration
+        ActiveRecord.deprecator.warn(<<-MSG.squish)
+          SchemaMigration no longer inherits from ActiveRecord::Base. If you want
+          to use the default connection, remove this argument. If you want to use a
+          specific connection, instaniate MigrationContext with the connection's schema
+          migration, for example `MigrationContext.new(path, Dog.connection.schema_migration)`.
+        MSG
+
+        schema_migration = nil
+      end
+
+      if internal_metadata == InternalMetadata
+        ActiveRecord.deprecator.warn(<<-MSG.squish)
+          SchemaMigration no longer inherits from ActiveRecord::Base. If you want
+          to use the default connection, remove this argument. If you want to use a
+          specific connection, instaniate MigrationContext with the connection's internal
+          metadata, for example `MigrationContext.new(path, nil, Dog.connection.internal_metadata)`.
+        MSG
+
+        internal_metadata = nil
+      end
+
       @migrations_paths = migrations_paths
-      @schema_migration = schema_migration
+      @schema_migration = schema_migration || SchemaMigration.new(ActiveRecord::Base.connection)
+      @internal_metadata = internal_metadata || InternalMetadata.new(ActiveRecord::Base.connection)
     end
 
     # Runs the migrations in the +migrations_path+.
@@ -1121,7 +1183,7 @@ module ActiveRecord
         migrations
       end
 
-      Migrator.new(:up, selected_migrations, schema_migration, target_version).migrate
+      Migrator.new(:up, selected_migrations, schema_migration, internal_metadata, target_version).migrate
     end
 
     def down(target_version = nil, &block) # :nodoc:
@@ -1131,20 +1193,20 @@ module ActiveRecord
         migrations
       end
 
-      Migrator.new(:down, selected_migrations, schema_migration, target_version).migrate
+      Migrator.new(:down, selected_migrations, schema_migration, internal_metadata, target_version).migrate
     end
 
     def run(direction, target_version) # :nodoc:
-      Migrator.new(direction, migrations, schema_migration, target_version).run
+      Migrator.new(direction, migrations, schema_migration, internal_metadata, target_version).run
     end
 
     def open # :nodoc:
-      Migrator.new(:up, migrations, schema_migration)
+      Migrator.new(:up, migrations, schema_migration, internal_metadata)
     end
 
     def get_all_versions # :nodoc:
       if schema_migration.table_exists?
-        schema_migration.all_versions.map(&:to_i)
+        schema_migration.integer_versions
       else
         []
       end
@@ -1203,11 +1265,12 @@ module ActiveRecord
     end
 
     def last_stored_environment # :nodoc:
-      return nil unless ActiveRecord::InternalMetadata.enabled?
+      connection = ActiveRecord::Base.connection
+      return nil unless connection.internal_metadata.enabled?
       return nil if current_version == 0
-      raise NoEnvironmentInSchemaError unless ActiveRecord::InternalMetadata.table_exists?
+      raise NoEnvironmentInSchemaError unless connection.internal_metadata.table_exists?
 
-      environment = ActiveRecord::InternalMetadata[:environment]
+      environment = connection.internal_metadata[:environment]
       raise NoEnvironmentInSchemaError unless environment
       environment
     end
@@ -1223,7 +1286,7 @@ module ActiveRecord
       end
 
       def move(direction, steps)
-        migrator = Migrator.new(direction, migrations, schema_migration)
+        migrator = Migrator.new(direction, migrations, schema_migration, internal_metadata)
 
         if current_version != 0 && !migrator.current_migration
           raise UnknownMigrationVersionError.new(current_version)
@@ -1248,23 +1311,27 @@ module ActiveRecord
 
       # For cases where a table doesn't exist like loading from schema cache
       def current_version
-        MigrationContext.new(migrations_paths, SchemaMigration).current_version
+        schema_migration = SchemaMigration.new(ActiveRecord::Base.connection)
+        internal_metadata = InternalMetadata.new(ActiveRecord::Base.connection)
+
+        MigrationContext.new(migrations_paths, schema_migration, internal_metadata).current_version
       end
     end
 
     self.migrations_paths = ["db/migrate"]
 
-    def initialize(direction, migrations, schema_migration, target_version = nil)
+    def initialize(direction, migrations, schema_migration, internal_metadata, target_version = nil)
       @direction         = direction
       @target_version    = target_version
       @migrated_versions = nil
       @migrations        = migrations
       @schema_migration  = schema_migration
+      @internal_metadata = internal_metadata
 
       validate(@migrations)
 
       @schema_migration.create_table
-      ActiveRecord::InternalMetadata.create_table
+      @internal_metadata.create_table
     end
 
     def current_version
@@ -1317,7 +1384,7 @@ module ActiveRecord
     end
 
     def load_migrated
-      @migrated_versions = Set.new(@schema_migration.all_versions.map(&:to_i))
+      @migrated_versions = Set.new(@schema_migration.integer_versions)
     end
 
     private
@@ -1325,10 +1392,9 @@ module ActiveRecord
       def run_without_lock
         migration = migrations.detect { |m| m.version == @target_version }
         raise UnknownMigrationVersionError.new(@target_version) if migration.nil?
-        result = execute_migration_in_transaction(migration)
 
         record_environment
-        result
+        execute_migration_in_transaction(migration)
       end
 
       # Used for running multiple migrations up to or down to a certain value.
@@ -1337,15 +1403,15 @@ module ActiveRecord
           raise UnknownMigrationVersionError.new(@target_version)
         end
 
-        result = runnable.each(&method(:execute_migration_in_transaction))
         record_environment
-        result
+        runnable.each(&method(:execute_migration_in_transaction))
       end
 
       # Stores the current environment in the database.
       def record_environment
         return if down?
-        ActiveRecord::InternalMetadata[:environment] = ActiveRecord::Base.connection.migration_context.current_environment
+        connection = ActiveRecord::Base.connection
+        connection.internal_metadata[:environment] = connection.migration_context.current_environment
       end
 
       def ran?(migration)
@@ -1397,10 +1463,10 @@ module ActiveRecord
       def record_version_state_after_migrating(version)
         if down?
           migrated.delete(version)
-          @schema_migration.delete_by(version: version.to_s)
+          @schema_migration.delete_version(version.to_s)
         else
           migrated << version
-          @schema_migration.create!(version: version.to_s)
+          @schema_migration.create_version(version.to_s)
         end
       end
 
@@ -1431,29 +1497,18 @@ module ActiveRecord
 
       def with_advisory_lock
         lock_id = generate_migrator_advisory_lock_id
+        connection = ActiveRecord::Base.connection
 
-        with_advisory_lock_connection do |connection|
-          got_lock = connection.get_advisory_lock(lock_id)
-          raise ConcurrentMigrationError unless got_lock
-          load_migrated # reload schema_migrations to be sure it wasn't changed by another process before we got the lock
-          yield
-        ensure
-          if got_lock && !connection.release_advisory_lock(lock_id)
-            raise ConcurrentMigrationError.new(
-              ConcurrentMigrationError::RELEASE_LOCK_FAILED_MESSAGE
-            )
-          end
-        end
-      end
-
-      def with_advisory_lock_connection(&block)
-        pool = ActiveRecord::ConnectionAdapters::ConnectionHandler.new.establish_connection(
-          ActiveRecord::Base.connection_db_config
-        )
-
-        pool.with_connection(&block)
+        got_lock = connection.get_advisory_lock(lock_id)
+        raise ConcurrentMigrationError unless got_lock
+        load_migrated # reload schema_migrations to be sure it wasn't changed by another process before we got the lock
+        yield
       ensure
-        pool&.disconnect!
+        if got_lock && !connection.release_advisory_lock(lock_id)
+          raise ConcurrentMigrationError.new(
+            ConcurrentMigrationError::RELEASE_LOCK_FAILED_MESSAGE
+          )
+        end
       end
 
       MIGRATOR_SALT = 2053462845

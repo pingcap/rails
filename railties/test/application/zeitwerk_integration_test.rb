@@ -78,7 +78,7 @@ class ZeitwerkIntegrationTest < ActiveSupport::TestCase
     end
     RUBY
 
-    app_file "config/initializers/autoload_Y.rb", "Y"
+    app_file "config/initializers/autoload_Y.rb", "Y.succ"
 
     # Preconditions.
     assert_not Object.const_defined?(:X)
@@ -138,15 +138,19 @@ class ZeitwerkIntegrationTest < ActiveSupport::TestCase
     assert $zeitwerk_integration_test_post
   end
 
-  test "reloading is enabled if config.cache_classes is false" do
+  test "reloading is enabled if config.enable_reloading is true" do
+    add_to_env_config "development", "config.enable_reloading = true"
+
     boot
 
     assert     Rails.autoloaders.main.reloading_enabled?
     assert_not Rails.autoloaders.once.reloading_enabled?
   end
 
-  test "reloading is disabled if config.cache_classes is true" do
-    boot("production")
+  test "reloading is disabled if config.enable_reloading is false" do
+    add_to_env_config "development", "config.enable_reloading = false"
+
+    boot
 
     assert_not Rails.autoloaders.main.reloading_enabled?
     assert_not Rails.autoloaders.once.reloading_enabled?
@@ -260,6 +264,19 @@ class ZeitwerkIntegrationTest < ActiveSupport::TestCase
     ActiveSupport::Dependencies.clear
 
     assert_equal %i(main_autoloader), $zeitwerk_integration_reload_test
+  end
+
+  test "reloading eager loads again, if enabled" do
+    add_to_env_config "development", "config.eager_load = true"
+
+    $zeitwerk_integration_test_eager_load_count = 0
+    app_file "app/models/user.rb", "class User; end; $zeitwerk_integration_test_eager_load_count += 1"
+
+    boot
+    assert_equal 1, $zeitwerk_integration_test_eager_load_count
+
+    Rails.application.reloader.reload!
+    assert_equal 2, $zeitwerk_integration_test_eager_load_count
   end
 
   test "reloading clears autoloaded tracked classes" do

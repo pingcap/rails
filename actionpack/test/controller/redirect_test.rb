@@ -88,6 +88,10 @@ class RedirectController < ActionController::Base
     redirect_back_or_to "http://www.rubyonrails.org/"
   end
 
+  def unsafe_redirect_malformed
+    redirect_to "http:///www.rubyonrails.org/"
+  end
+
   def only_path_redirect
     redirect_to action: "other_host", only_path: true
   end
@@ -385,7 +389,7 @@ class RedirectTest < ActionController::TestCase
       set.draw do
         resources :workshops
 
-        ActiveSupport::Deprecation.silence do
+        ActionDispatch.deprecator.silence do
           get ":controller/:action"
         end
       end
@@ -407,7 +411,7 @@ class RedirectTest < ActionController::TestCase
           resources :workshops
         end
 
-        ActiveSupport::Deprecation.silence do
+        ActionDispatch.deprecator.silence do
           get ":controller/:action"
         end
       end
@@ -425,7 +429,7 @@ class RedirectTest < ActionController::TestCase
           resources :workshops
         end
 
-        ActiveSupport::Deprecation.silence do
+        ActionDispatch.deprecator.silence do
           get ":controller/:action"
         end
       end
@@ -472,7 +476,7 @@ class RedirectTest < ActionController::TestCase
   def test_redirect_to_with_block_and_accepted_options
     with_routing do |set|
       set.draw do
-        ActiveSupport::Deprecation.silence do
+        ActionDispatch.deprecator.silence do
           get ":controller/:action"
         end
       end
@@ -501,6 +505,16 @@ class RedirectTest < ActionController::TestCase
       end
 
       assert_equal "Unsafe redirect to \"http://www.rubyonrails.org/\", pass allow_other_host: true to redirect anyway.", error.message
+    end
+  end
+
+  def test_unsafe_redirect_with_malformed_url
+    with_raise_on_open_redirects do
+      error = assert_raise(ActionController::Redirecting::UnsafeRedirectError) do
+        get :unsafe_redirect_malformed
+      end
+
+      assert_equal "Unsafe redirect to \"http:///www.rubyonrails.org/\", pass allow_other_host: true to redirect anyway.", error.message
     end
   end
 

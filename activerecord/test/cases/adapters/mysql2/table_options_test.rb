@@ -19,13 +19,13 @@ class Mysql2TableOptionsTest < ActiveRecord::Mysql2TestCase
   test "table options with ENGINE" do
     @connection.create_table "mysql_table_options", force: true, options: "ENGINE=MyISAM"
     output = dump_table_schema("mysql_table_options")
-    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV["tidb"].present?
     expected = /create_table "mysql_table_options", charset: "utf8mb4"(?:, collation: "\w+")?, options: "ENGINE=MyISAM", force: :cascade/
     assert_match expected, output
   end
 
   test "table options with ROW_FORMAT" do
-    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV["tidb"].present?
     @connection.create_table "mysql_table_options", force: true, options: "ROW_FORMAT=REDUNDANT"
     output = dump_table_schema("mysql_table_options")
     expected = /create_table "mysql_table_options", charset: "utf8mb4"(?:, collation: "\w+")?, options: "ENGINE=InnoDB ROW_FORMAT=REDUNDANT", force: :cascade/
@@ -33,10 +33,10 @@ class Mysql2TableOptionsTest < ActiveRecord::Mysql2TestCase
   end
 
   test "table options with CHARSET" do
-    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV["tidb"].present?
     @connection.create_table "mysql_table_options", force: true, options: "CHARSET=latin1"
     output = dump_table_schema("mysql_table_options")
-    expected = /create_table "mysql_table_options", charset: "latin1", force: :cascade/
+    expected = /create_table "mysql_table_options", charset: "latin1"(?:, collation: "\w+")?, force: :cascade/
     assert_match expected, output
   end
 
@@ -55,7 +55,7 @@ class Mysql2TableOptionsTest < ActiveRecord::Mysql2TestCase
   end
 
   test "charset and partitioned table options" do
-    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV['tidb'].present?
+    skip("TiDB issue: https://docs.pingcap.com/tidb/v5.0/mysql-compatibility#storage-engines") if ENV["tidb"].present?
     @connection.create_table "mysql_table_options", primary_key: ["id", "account_id"], charset: "utf8mb4", collation: "utf8mb4_bin", options: "ENGINE=InnoDB\n/*!50100 PARTITION BY HASH (`account_id`)\nPARTITIONS 128 */", force: :cascade do |t|
       t.bigint "id", null: false, auto_increment: true
       t.bigint "account_id", null: false, unsigned: true
@@ -99,7 +99,7 @@ class Mysql2DefaultEngineOptionTest < ActiveRecord::Mysql2TestCase
     ActiveRecord::Base.logger       = @logger_was
     ActiveRecord::Migration.verbose = @verbose_was
     ActiveRecord::Base.connection.drop_table "mysql_table_options", if_exists: true
-    ActiveRecord::SchemaMigration.delete_all rescue nil
+    ActiveRecord::Base.connection.schema_migration.delete_all_versions rescue nil
   end
 
   test "new migrations do not contain default ENGINE=InnoDB option" do
@@ -119,7 +119,8 @@ class Mysql2DefaultEngineOptionTest < ActiveRecord::Mysql2TestCase
       end
     end.new
 
-    ActiveRecord::Migrator.new(:up, [migration], ActiveRecord::Base.connection.schema_migration).migrate
+    connection = ActiveRecord::Base.connection
+    ActiveRecord::Migrator.new(:up, [migration], connection.schema_migration, connection.internal_metadata).migrate
 
     assert_match %r{ENGINE=InnoDB}, @log.string
 

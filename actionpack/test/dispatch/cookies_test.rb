@@ -334,6 +334,16 @@ class CookiesTest < ActionController::TestCase
 
       head :ok
     end
+
+    def set_same_site_strict
+      cookies["user_name"] = { value: "david", same_site: :strict }
+      head :ok
+    end
+
+    def set_same_site_nil
+      cookies["user_name"] = { value: "david", same_site: nil }
+      head :ok
+    end
   end
 
   tests TestController
@@ -362,7 +372,7 @@ class CookiesTest < ActionController::TestCase
     @request.host = "www.nextangle.com"
   end
 
-  def test_setting_cookie_with_no_protection
+  def test_setting_cookie_with_no_same_site_protection
     @request.env["action_dispatch.cookies_same_site_protection"] = proc { :none }
 
     get :authenticate
@@ -370,7 +380,7 @@ class CookiesTest < ActionController::TestCase
     assert_equal({ "user_name" => "david" }, @response.cookies)
   end
 
-  def test_setting_cookie_with_protection_proc_normal_user_agent
+  def test_setting_cookie_with_same_site_protection_proc_normal_user_agent
     @request.env["action_dispatch.cookies_same_site_protection"] = Proc.new do |request|
       :strict unless request.user_agent == "spooky browser"
     end
@@ -380,7 +390,7 @@ class CookiesTest < ActionController::TestCase
     assert_equal({ "user_name" => "david" }, @response.cookies)
   end
 
-  def test_setting_cookie_with_protection_proc_special_user_agent
+  def test_setting_cookie_with_same_site_protection_proc_special_user_agent
     @request.env["action_dispatch.cookies_same_site_protection"] = Proc.new do |request|
       :strict unless request.user_agent == "spooky browser"
     end
@@ -391,7 +401,7 @@ class CookiesTest < ActionController::TestCase
     assert_equal({ "user_name" => "david" }, @response.cookies)
   end
 
-  def test_setting_cookie_with_misspelled_protection_raises
+  def test_setting_cookie_with_misspelled_same_site_protection_raises
     @request.env["action_dispatch.cookies_same_site_protection"] = proc { :funky }
 
     error = assert_raise ArgumentError do
@@ -400,11 +410,35 @@ class CookiesTest < ActionController::TestCase
     assert_match "Invalid SameSite value: :funky", error.message
   end
 
-  def test_setting_cookie_with_strict
+  def test_setting_cookie_with_same_site_strict
     @request.env["action_dispatch.cookies_same_site_protection"] = proc { :strict }
 
     get :authenticate
     assert_cookie_header "user_name=david; path=/; SameSite=Strict"
+    assert_equal({ "user_name" => "david" }, @response.cookies)
+  end
+
+  def test_setting_cookie_with_same_site_nil
+    @request.env["action_dispatch.cookies_same_site_protection"] = proc { nil }
+
+    get :authenticate
+    assert_cookie_header "user_name=david; path=/"
+    assert_equal({ "user_name" => "david" }, @response.cookies)
+  end
+
+  def test_setting_cookie_with_specific_same_site_strict
+    @request.env["action_dispatch.cookies_same_site_protection"] = proc { :lax }
+
+    get :set_same_site_strict
+    assert_cookie_header "user_name=david; path=/; SameSite=Strict"
+    assert_equal({ "user_name" => "david" }, @response.cookies)
+  end
+
+  def test_setting_cookie_with_specific_same_site_nil
+    @request.env["action_dispatch.cookies_same_site_protection"] = proc { :lax }
+
+    get :set_same_site_nil
+    assert_cookie_header "user_name=david; path=/"
     assert_equal({ "user_name" => "david" }, @response.cookies)
   end
 
@@ -776,6 +810,24 @@ class CookiesTest < ActionController::TestCase
     assert_nil @response.cookies["foo"]
   end
 
+  def test_encrypted_cookie_using_json_serializer_will_drop_marshal_dumped_value
+    @request.env["action_dispatch.cookies_serializer"] = :json
+
+    key_generator = @request.env["action_dispatch.key_generator"]
+    secret = key_generator.generate_key(@request.env["action_dispatch.authenticated_encrypted_cookie_salt"], 32)
+
+    encryptor = ActiveSupport::MessageEncryptor.new(secret, cipher: "aes-256-gcm", serializer: Marshal)
+    marshal_value = encryptor.encrypt_and_sign("bar")
+    @request.headers["Cookie"] = "foo=#{::Rack::Utils.escape marshal_value}"
+
+    get :get_encrypted_cookie
+
+    cookies = @controller.send :cookies
+    assert_not_equal "bar", cookies[:foo]
+    assert_nil cookies.encrypted[:foo] # #parse rescues JSON::ParserError and returns nil
+    assert_nil @response.cookies["foo"]
+  end
+
   def test_accessing_nonexistent_encrypted_cookie_should_not_raise_invalid_message
     get :set_encrypted_cookie
     assert_nil @controller.send(:cookies).encrypted[:non_existent_attribute]
@@ -800,9 +852,10 @@ class CookiesTest < ActionController::TestCase
   end
 
   def test_raise_data_overflow
-    assert_raise(ActionDispatch::Cookies::CookieOverflow) do
+    error = assert_raise(ActionDispatch::Cookies::CookieOverflow) do
       get :raise_data_overflow
     end
+    assert_equal "foo cookie overflowed with size 5522 bytes", error.message
   end
 
   def test_tampered_cookies

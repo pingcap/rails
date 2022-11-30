@@ -96,7 +96,7 @@ module ActiveModel
       # Example:
       #
       #   validates :password, presence: true, confirmation: true, if: :password_required?
-      #   validates :token, length: 24, strict: TokenLengthException
+      #   validates :token, length: {is: 24}, strict: TokenLengthException
       #
       #
       # Finally, the options +:if+, +:unless+, +:on+, +:allow_blank+, +:allow_nil+, +:strict+
@@ -116,7 +116,7 @@ module ActiveModel
           key = "#{key.to_s.camelize}Validator"
 
           begin
-            validator = key.include?("::") ? key.constantize : const_get(key)
+            validator = const_get(key)
           rescue NameError
             raise ArgumentError, "Unknown validator: '#{key}'"
           end

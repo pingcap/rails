@@ -70,7 +70,7 @@ module ActionDispatch
     end
 
     def cookies_same_site_protection
-      get_header(Cookies::COOKIES_SAME_SITE_PROTECTION) || Proc.new { }
+      get_header(Cookies::COOKIES_SAME_SITE_PROTECTION)&.call(self)
     end
 
     def cookies_digest
@@ -92,7 +92,7 @@ module ActionDispatch
     include RequestCookieMethods
   end
 
-  # Read and write data to cookies through ActionController#cookies.
+  # Read and write data to cookies through ActionController::Base#cookies.
   #
   # When reading cookie data, the data is read from the HTTP request header, Cookie.
   # When writing cookie data, the data is sent out in the HTTP response header, Set-Cookie.
@@ -176,6 +176,10 @@ module ActionDispatch
   #   Default is +false+.
   # * <tt>:httponly</tt> - Whether this cookie is accessible via scripting or
   #   only HTTP. Defaults to +false+.
+  # * <tt>:same_site</tt> - The value of the +SameSite+ cookie attribute, which
+  #   determines how this cookie should be restricted in cross-site contexts.
+  #   Possible values are +nil+, +:none+, +:lax+, and +:strict+. Defaults to
+  #   +:lax+.
   class Cookies
     HTTP_HEADER   = "Set-Cookie"
     GENERATOR_KEY = "action_dispatch.key_generator"
@@ -449,8 +453,9 @@ module ActionDispatch
 
           options[:path]      ||= "/"
 
-          cookies_same_site_protection = request.cookies_same_site_protection
-          options[:same_site] ||= cookies_same_site_protection.call(request)
+          unless options.key?(:same_site)
+            options[:same_site] = request.cookies_same_site_protection
+          end
 
           if options[:domain] == :all || options[:domain] == "all"
             # If there is a provided tld length then we use it otherwise default domain regexp.
@@ -627,7 +632,9 @@ module ActionDispatch
         def commit(name, options)
           options[:value] = @verifier.generate(serialize(options[:value]), **cookie_metadata(name, options))
 
-          raise CookieOverflow if options[:value].bytesize > MAX_COOKIE_SIZE
+          if options[:value].bytesize > MAX_COOKIE_SIZE
+            raise CookieOverflow, "#{name} cookie overflowed with size #{options[:value].bytesize} bytes"
+          end
         end
     end
 
@@ -672,14 +679,16 @@ module ActionDispatch
           deserialize(name) do |rotate|
             @encryptor.decrypt_and_verify(encrypted_message, on_rotation: rotate, purpose: purpose)
           end
-        rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::MessageVerifier::InvalidSignature
+        rescue ActiveSupport::MessageEncryptor::InvalidMessage, ActiveSupport::MessageVerifier::InvalidSignature, JSON::ParserError
           nil
         end
 
         def commit(name, options)
           options[:value] = @encryptor.encrypt_and_sign(serialize(options[:value]), **cookie_metadata(name, options))
 
-          raise CookieOverflow if options[:value].bytesize > MAX_COOKIE_SIZE
+          if options[:value].bytesize > MAX_COOKIE_SIZE
+            raise CookieOverflow, "#{name} cookie overflowed with size #{options[:value].bytesize} bytes"
+          end
         end
     end
 

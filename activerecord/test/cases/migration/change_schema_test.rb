@@ -26,7 +26,7 @@ module ActiveRecord
       end
 
       def test_add_column_with_primary_key_attribute
-        skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#primary-key") if ENV['tidb'].present?
+        skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#primary-key") if ENV["tidb"].present?
         testing_table_with_only_foo_attribute do
           connection.add_column :testings, :id, :primary_key
           assert_equal connection.columns(:testings).size, 2
@@ -184,7 +184,7 @@ module ActiveRecord
           end
         end
 
-        assert_equal "you can't redefine the primary key column 'id'. To define a custom primary key, pass { id: false } to create_table.", error.message
+        assert_equal "you can't redefine the primary key column 'id' on 'testings'. To define a custom primary key, pass { id: false } to create_table.", error.message
       end
 
       def test_create_table_raises_when_redefining_custom_primary_key_column
@@ -194,7 +194,7 @@ module ActiveRecord
           end
         end
 
-        assert_equal "you can't redefine the primary key column 'testing_id'. To define a custom primary key, pass { id: false } to create_table.", error.message
+        assert_equal "you can't redefine the primary key column 'testing_id' on 'testings'. To define a custom primary key, pass { id: false } to create_table.", error.message
       end
 
       def test_create_table_raises_when_defining_existing_column
@@ -205,7 +205,7 @@ module ActiveRecord
           end
         end
 
-        assert_equal "you can't define an already defined column 'testing_column'.", error.message
+        assert_equal "you can't define an already defined column 'testing_column' on 'testings'.", error.message
       end
 
       def test_create_table_with_timestamps_should_create_datetime_columns
@@ -287,7 +287,7 @@ module ActiveRecord
         elsif current_adapter?(:OracleAdapter)
           assert_equal "TIMESTAMP(6)", column.sql_type
         else
-          assert_equal connection.type_to_sql("datetime"), column.sql_type
+          assert_equal connection.type_to_sql("datetime(6)"), column.sql_type
         end
       end
 

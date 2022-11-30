@@ -10,7 +10,6 @@ After reading this guide you will know:
 * How to set up your application for multiple databases.
 * How automatic connection switching works.
 * How to use horizontal sharding for multiple databases.
-* How to migrate from `legacy_connection_handling` to the new connection handling.
 * What features are supported and what's still a work in progress.
 
 --------------------------------------------------------------------------------
@@ -33,7 +32,7 @@ The following features are not (yet) supported:
 
 * Load balancing replicas
 
-## Setting up your application
+## Setting up Your Application
 
 While Rails tries to do most of the work for you there are still some steps you'll
 need to do to get your application ready for multiple databases.
@@ -130,7 +129,7 @@ If you use a differently named class for your application record you need to
 set `primary_abstract_class` instead, so that Rails knows which class `ActiveRecord::Base`
 should share a connection with.
 
-```
+```ruby
 class PrimaryApplicationRecord < ActiveRecord::Base
   self.primary_abstract_class = true
 end
@@ -275,7 +274,7 @@ $ bin/rails generate scaffold Dog name:string --database animals --parent Animal
 This will skip generating `AnimalsRecord` since you've indicated to Rails that you want to
 use a different parent class.
 
-## Activating automatic role switching
+## Activating Automatic Role Switching
 
 Finally, in order to use the read-only replica in your application, you'll need to activate
 the middleware for automatic switching.
@@ -333,7 +332,7 @@ config.active_record.database_resolver = ActiveRecord::Middleware::DatabaseSelec
 config.active_record.database_resolver_context = MyCookieResolver
 ```
 
-## Using manual connection switching
+## Using Manual Connection Switching
 
 There are some cases where you may want your application to connect to a writer or a replica
 and the automatic connection switching isn't adequate. For example, you may know that for a
@@ -368,7 +367,7 @@ ActiveRecord::Base.connected_to(role: :reading, prevent_writes: true) do
 end
 ```
 
-## Horizontal sharding
+## Horizontal Sharding
 
 Horizontal sharding is when you split up your database to reduce the number of rows on each
 database server, but maintain the same schema across "shards". This is commonly called "multi-tenant"
@@ -433,7 +432,7 @@ ActiveRecord::Base.connected_to(role: :reading, shard: :shard_one) do
 end
 ```
 
-## Activating automatic shard switching
+## Activating Automatic Shard Switching
 
 Applications are able to automatically switch shards per request using the provided
 middleware.
@@ -477,41 +476,12 @@ config.active_record.shard_resolver = ->(request) {
 }
 ```
 
-## Migrate to the new connection handling
-
-In Rails 6.1+, Active Record provides a new internal API for connection management.
-In most cases applications will not need to make any changes except to opt-in to the
-new behavior (if upgrading from 6.0 and below) by setting
-[`config.active_record.legacy_connection_handling`][] to `false`. If you have a single database
-application, no other changes will be required. If you have a multiple database application
-the following changes are required if your application is using these methods:
-
-* `connection_handlers` and `connection_handlers=` no longer works in the new connection
-handling. If you were calling a method on one of the connection handlers, for example,
-`connection_handlers[:reading].retrieve_connection_pool("ActiveRecord::Base")`
-you will now need to update that call to be
-`connection_handlers.retrieve_connection_pool("ActiveRecord::Base", role: :reading)`.
-* Calls to `ActiveRecord::Base.connection_handler.prevent_writes` will need to be updated
-to `ActiveRecord::Base.connection.preventing_writes?`.
-* If you need all the pools, including writing and reading, a new method has been provided on
-the handler. Call `connection_handler.all_connection_pools` to use this. In most cases though
-you'll want writing or reading pools with `connection_handler.connection_pool_list(:writing)` or
-`connection_handler.connection_pool_list(:reading)`.
-* If you turn off `legacy_connection_handling` in your application, any method that's unsupported
-will raise an error (i.e. `connection_handlers=`).
-
-[`config.active_record.legacy_connection_handling`]: configuring.html#config-active-record-legacy-connection-handling
-
 ## Granular Database Connection Switching
 
 In Rails 6.1 it's possible to switch connections for one database instead of
-all databases globally. To use this feature you must first set
-[`config.active_record.legacy_connection_handling`][] to `false` in your application
-configuration. The majority of applications should not need to make any other
-changes since the public APIs have the same behavior. See the above section for
-how to enable and migrate away from `legacy_connection_handling`.
+all databases globally.
 
-With `legacy_connection_handling` set to `false`, any abstract connection class
+With granular database connection switching, any abstract connection class
 will be able to switch connections without affecting other connections. This
 is useful for switching your `AnimalsRecord` queries to read from the replica
 while ensuring your `ApplicationRecord` queries go to the primary.
@@ -545,7 +515,7 @@ end
 `ActiveRecord::Base.connected_to` maintains the ability to switch
 connections globally.
 
-### Handling associations with joins across databases
+### Handling Associations with Joins across Databases
 
 As of Rails 7.0+, Active Record has an option for handling associations that would perform
 a join across multiple databases. If you have a has many through or a has one through association

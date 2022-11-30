@@ -190,7 +190,7 @@ Note that an object instantiated with `new` will not report errors
 even if it's technically invalid, because validations are automatically run
 only when the object is saved, such as with the `create` or `save` methods.
 
-```
+```ruby
 class Person < ApplicationRecord
   validates :name, presence: true
 end
@@ -319,30 +319,6 @@ This validation is very specific to web applications and this
 don't have a field for it, the helper will create a virtual attribute. If
 the field does exist in your database, the `accept` option must be set to
 or include `true` or else the validation will not run.
-
-### `validates_associated`
-
-You should use this helper when your model has associations with other models
-and they also need to be validated. When you try to save your object, `valid?`
-will be called upon each one of the associated objects.
-
-```ruby
-class Library < ApplicationRecord
-  has_many :books
-  validates_associated :books
-end
-```
-
-This validation will work with all of the association types.
-
-CAUTION: Don't use `validates_associated` on both ends of your associations.
-They would call each other in an infinite loop.
-
-The default error message for [`validates_associated`][] is _"is invalid"_. Note
-that each associated object will contain its own `errors` collection; errors do
-not bubble up to the calling model.
-
-[`validates_associated`]: https://api.rubyonrails.org/classes/ActiveRecord/Validations/ClassMethods.html#method-i-validates_associated
 
 ### `confirmation`
 
@@ -702,6 +678,30 @@ searches anyway.
 
 The default error message is _"has already been taken"_.
 
+### `validates_associated`
+
+You should use this helper when your model has associations that always need to
+be validated. Every time you try to save your object, `valid?` will be called
+on each one of the associated objects.
+
+```ruby
+class Library < ApplicationRecord
+  has_many :books
+  validates_associated :books
+end
+```
+
+This validation will work with all of the association types.
+
+CAUTION: Don't use `validates_associated` on both ends of your associations.
+They would call each other in an infinite loop.
+
+The default error message for [`validates_associated`][] is _"is invalid"_. Note
+that each associated object will contain its own `errors` collection; errors do
+not bubble up to the calling model.
+
+[`validates_associated`]: https://api.rubyonrails.org/classes/ActiveRecord/Validations/ClassMethods.html#method-i-validates_associated
+
 ### `validates_with`
 
 This helper passes the record to a separate class for validation.
@@ -1020,7 +1020,7 @@ conditions in a shorter way.
 validates :password, confirmation: true, unless: -> { password.blank? }
 ```
 
-### Grouping Conditional validations
+### Grouping Conditional Validations
 
 Sometimes it is useful to have multiple validations use one condition. It can
 be easily achieved using [`with_options`][].
@@ -1078,8 +1078,7 @@ class MyValidator < ActiveModel::Validator
   end
 end
 
-class Person
-  include ActiveModel::Validations
+class Person < ApplicationRecord
   validates_with MyValidator
 end
 ```
@@ -1121,7 +1120,7 @@ class method, passing in the symbols for the validation methods' names.
 You can pass more than one symbol for each class method and the respective
 validations will be run in the same order as they were registered.
 
-The `valid?` method will verify that the errors collection is empty,
+The `valid?` method will verify that the `errors` collection is empty,
 so your custom validation methods should add errors to it when you
 wish validation to fail:
 
@@ -1229,7 +1228,7 @@ irb> person.errors[:name]
 => ["can't be blank", "is too short (minimum is 3 characters)"]
 ```
 
-### `errors.where` and error object
+### `errors.where` and Error Object
 
 Sometimes we may need more information about each error beside its message. Each error is encapsulated as an `ActiveModel::Error` object, and [`where`][] method is the most common way of access.
 
@@ -1275,7 +1274,7 @@ irb> error.full_message
 => "Name is too short (minimum is 3 characters)"
 ```
 
-The [`full_message`][] method generates a more user-friendly message, with the capitalized attribute name prepended.
+The [`full_message`][] method generates a more user-friendly message, with the capitalized attribute name prepended. (To customize the format that `full_message` uses, see the [I18n guide](i18n.html#active-model-methods).)
 
 [`full_message`]: https://api.rubyonrails.org/classes/ActiveModel/Errors.html#method-i-full_message
 [`where`]: https://api.rubyonrails.org/classes/ActiveModel/Errors.html#method-i-where
