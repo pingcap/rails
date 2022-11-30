@@ -34,7 +34,7 @@ module ActiveRecord
       end
 
       def test_migration_doesnt_remove_named_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV["tidb"].present?
         connection.add_index :testings, :foo, name: "custom_index_name"
 
         migration = Class.new(ActiveRecord::Migration[4.2]) {
@@ -50,7 +50,7 @@ module ActiveRecord
       end
 
       def test_migration_does_remove_unnamed_index
-        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
+        skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV["tidb"].present?
         connection.add_index :testings, :bar
 
         migration = Class.new(ActiveRecord::Migration[4.2]) {
@@ -926,7 +926,7 @@ module LegacyPrimaryKeyTestCases
   end
 
   def test_legacy_primary_key_in_create_table_should_be_integer
-    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#primary-key") if ENV['tidb'].present?
+    skip("TiDB issue: https://docs.pingcap.com/tidb/stable/constraints#primary-key") if ENV["tidb"].present?
     @migration = Class.new(migration_class) {
       def change
         create_table :legacy_primary_keys, id: false do |t|
@@ -941,7 +941,7 @@ module LegacyPrimaryKeyTestCases
   end
 
   def test_legacy_primary_key_in_change_table_should_be_integer
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/10190") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/10190") if ENV["tidb"].present?
     @migration = Class.new(migration_class) {
       def change
         create_table :legacy_primary_keys, id: false do |t|
@@ -959,7 +959,7 @@ module LegacyPrimaryKeyTestCases
   end
 
   def test_add_column_with_legacy_primary_key_should_be_integer
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/10190") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/10190") if ENV["tidb"].present?
     @migration = Class.new(migration_class) {
       def change
         create_table :legacy_primary_keys, id: false do |t|

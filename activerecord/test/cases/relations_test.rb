@@ -1579,7 +1579,7 @@ class RelationTest < ActiveRecord::TestCase
   end
 
   def test_create_or_find_by_within_transaction
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV["tidb"].present?
     assert_nil Subscriber.find_by(nick: "bob")
 
     subscriber = Subscriber.create!(nick: "bob")
@@ -1612,7 +1612,7 @@ class RelationTest < ActiveRecord::TestCase
   end
 
   def test_create_or_find_by_with_bang_within_transaction
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/6840") if ENV["tidb"].present?
     assert_nil Subscriber.find_by(nick: "bob")
 
     subscriber = Subscriber.create!(nick: "bob")

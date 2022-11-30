@@ -809,7 +809,7 @@ class QueryCacheExpiryTest < ActiveRecord::TestCase
     end
   end
 
-  if ENV['tidb'].blank?
+  if ENV["tidb"].blank?
     test "threads use the same connection" do
       @connection_1 = ActiveRecord::Base.connection.object_id
 

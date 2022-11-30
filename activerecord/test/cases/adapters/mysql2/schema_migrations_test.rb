@@ -11,7 +11,7 @@ class SchemaMigrationsTest < ActiveRecord::Mysql2TestCase
   end
 
   def test_renaming_index_on_foreign_key
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/26110") if ENV["tidb"].present?
     connection.add_index "engines", "car_id"
     connection.add_foreign_key :engines, :cars, name: "fk_engines_cars"
 

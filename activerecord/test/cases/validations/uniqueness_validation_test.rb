@@ -353,7 +353,7 @@ class UniquenessValidationTest < ActiveRecord::TestCase
   end
 
   def test_validate_uniqueness_by_default_database_collation
-    skip("TiDB issue: https://github.com/pingcap/tidb/issues/7519") if ENV['tidb'].present?
+    skip("TiDB issue: https://github.com/pingcap/tidb/issues/7519") if ENV["tidb"].present?
     Topic.validates_uniqueness_of(:author_email_address)
 
     topic1 = Topic.new(author_email_address: "david@loudthinking.com")

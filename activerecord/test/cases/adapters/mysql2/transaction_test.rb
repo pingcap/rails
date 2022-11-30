@@ -91,7 +91,7 @@ module ActiveRecord
         end
       end
     end
-    if ENV['tidb'].blank?
+    if ENV["tidb"].blank?
       test "raises StatementTimeout when statement timeout exceeded" do
         skip unless ActiveRecord::Base.connection.show_variable("max_execution_time")
         error = assert_raises(ActiveRecord::StatementTimeout) do
@@ -122,7 +122,7 @@ module ActiveRecord
         assert_kind_of ActiveRecord::QueryAborted, error
       end
     end
-    if ENV['tidb'].blank?
+    if ENV["tidb"].blank?
       # TODDO
       test "raises QueryCanceled when canceling statement due to user request" do
         error = assert_raises(ActiveRecord::QueryCanceled) do

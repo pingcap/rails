@@ -157,7 +157,7 @@ if ActiveRecord::Base.connection.supports_views?
   end
 
   # SQLite does not support CREATE, INSERT, and DELETE for VIEW  
-  if current_adapter?(:Mysql2Adapter, :SQLServerAdapter, :PostgreSQLAdapter) && ENV['tidb'].blank?
+  if current_adapter?(:Mysql2Adapter, :SQLServerAdapter, :PostgreSQLAdapter) && ENV["tidb"].blank?
 
     class UpdateableViewTest < ActiveRecord::TestCase
       self.use_transactional_tests = false
