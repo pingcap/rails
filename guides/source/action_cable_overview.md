@@ -165,6 +165,29 @@ end
 
 [`rescue_from`]: https://api.rubyonrails.org/classes/ActiveSupport/Rescuable/ClassMethods.html#method-i-rescue_from
 
+#### Connection Callbacks
+
+There are `before_command`, `after_command`, and `around_command` callbacks available to be invoked before, after or around every command received by a client respectively.
+The term "command" here refers to any interaction received by a client (subscribing, unsubscribing or performing actions):
+
+```ruby
+# app/channels/application_cable/connection.rb
+module ApplicationCable
+  class Connection < ActionCable::Connection::Base
+    identified_by :user
+
+    around_command :set_current_account
+
+    private
+
+    def set_current_account
+      # Now all channels could use Current.account
+      Current.set(account: user.account) { yield }
+    end
+  end
+end
+```
+
 ### Channels
 
 A *channel* encapsulates a logical unit of work, similar to what a controller does in a
@@ -234,6 +257,38 @@ class ChatChannel < ApplicationCable::Channel
 end
 ```
 
+#### Channel Callbacks
+
+`ApplicationCable::Channel` provides a number of callbacks that can be used to trigger logic
+during the life cycle of a channel. Available callbacks are:
+
+- `before_subscribe`
+- `after_subscribe` (also aliased as: `on_subscribe`)
+- `before_unsubscribe`
+- `after_unsubscribe` (also aliased as: `on_unsubscribe`)
+
+NOTE: The `after_subscribe` callback is triggered whenever the `subscribed` method is called,
+even if subscription was rejected with the `reject` method. To trigger `after_subscribe`
+only on successful subscriptions, use `after_subscribe :send_welcome_message, unless: :subscription_rejected?`
+
+```ruby
+# app/channels/chat_channel.rb
+class ChatChannel < ApplicationCable::Channel
+  after_subscribe :send_welcome_message, unless: :subscription_rejected?
+  after_subscribe :track_subscription
+
+  private
+
+  def send_welcome_message
+    broadcast_to(...)
+  end
+  
+  def track_subscription
+    # ...
+  end
+end
+```
+
 ## Client-Side Components
 
 ### Connections
@@ -263,6 +318,8 @@ WebSocket is opened.
 
 ```js
 // Specify a different URL to connect to
+createConsumer('wss://example.com/cable')
+// Or when using websockets over HTTP
 createConsumer('https://ws.example.com/cable')
 
 // Use a function to dynamically generate the URL
@@ -270,7 +327,7 @@ createConsumer(getWebSocketURL)
 
 function getWebSocketURL() {
   const token = localStorage.get('auth-token')
-  return `https://ws.example.com/cable?token=${token}`
+  return `wss://example.com/cable?token=${token}`
 }
 ```
 
@@ -573,14 +630,14 @@ consumer.subscriptions.create("AppearanceChannel", {
   install() {
     window.addEventListener("focus", this.update)
     window.addEventListener("blur", this.update)
-    document.addEventListener("turbolinks:load", this.update)
+    document.addEventListener("turbo:load", this.update)
     document.addEventListener("visibilitychange", this.update)
   },
 
   uninstall() {
     window.removeEventListener("focus", this.update)
     window.removeEventListener("blur", this.update)
-    document.removeEventListener("turbolinks:load", this.update)
+    document.removeEventListener("turbo:load", this.update)
     document.removeEventListener("visibilitychange", this.update)
   },
 
@@ -597,8 +654,7 @@ consumer.subscriptions.create("AppearanceChannel", {
 
 #### Client-Server Interaction
 
-1. **Client** connects to the **Server** via `App.cable =
-ActionCable.createConsumer("ws://cable.example.com")`. (`cable.js`). The
+1. **Client** connects to the **Server** via `createConsumer()`. (`consumer.js`). The
 **Server** identifies this connection by `current_user`.
 
 2. **Client** subscribes to the appearance channel via
@@ -721,7 +777,7 @@ The async adapter is intended for development/testing and should not be used in 
 
 The Redis adapter requires users to provide a URL pointing to the Redis server.
 Additionally, a `channel_prefix` may be provided to avoid channel name collisions
-when using the same Redis server for multiple applications. See the [Redis PubSub documentation](https://redis.io/topics/pubsub#database-amp-scoping) for more details.
+when using the same Redis server for multiple applications. See the [Redis Pub/Sub documentation](https://redis.io/docs/manual/pubsub/#database--scoping) for more details.
 
 The Redis adapter also supports SSL/TLS connections. The required SSL/TLS parameters can be passed in `ssl_params` key in the configuration YAML file.
 
@@ -791,7 +847,7 @@ connections as you have workers. The default worker pool size is set to 4, so
 that means you have to make at least 4 database connections available.
 You can change that in `config/database.yml` through the `pool` attribute.
 
-### Client-side logging
+### Client-side Logging
 
 Client-side logging is disabled by default. You can enable this by setting the `ActionCable.logger.enabled` to true.
 

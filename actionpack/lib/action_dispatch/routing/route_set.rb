@@ -574,6 +574,20 @@ module ActionDispatch
           end
 
           private :_generate_paths_by_default
+
+          # If the module is included more than once (for example, in a subclass
+          # of an ancestor that includes the module), ensure that the `_routes`
+          # singleton and instance methods return the desired route set by
+          # including a new copy of the module (recursively if necessary). Note
+          # that this method is called for each inclusion, whereas the above
+          # `included` block is run only for the initial inclusion of each copy.
+          def self.included(base)
+            super
+            if !base._routes.equal?(@_proxy._routes)
+              @dup_for_reinclude ||= self.dup
+              base.include @dup_for_reinclude
+            end
+          end
         end
       end
 
@@ -596,14 +610,14 @@ module ActionDispatch
         named_routes[name] = route if name
 
         if route.segment_keys.include?(:controller)
-          ActiveSupport::Deprecation.warn(<<-MSG.squish)
+          ActionDispatch.deprecator.warn(<<-MSG.squish)
             Using a dynamic :controller segment in a route is deprecated and
             will be removed in Rails 7.1.
           MSG
         end
 
         if route.segment_keys.include?(:action)
-          ActiveSupport::Deprecation.warn(<<-MSG.squish)
+          ActionDispatch.deprecator.warn(<<-MSG.squish)
             Using a dynamic :action segment in a route is deprecated and
             will be removed in Rails 7.1.
           MSG
@@ -779,18 +793,14 @@ module ActionDispatch
 
       RESERVED_OPTIONS = [:host, :protocol, :port, :subdomain, :domain, :tld_length,
                           :trailing_slash, :anchor, :params, :only_path, :script_name,
-                          :original_script_name, :relative_url_root]
+                          :original_script_name]
 
       def optimize_routes_generation?
         default_url_options.empty?
       end
 
       def find_script_name(options)
-        options.delete(:script_name) || find_relative_url_root(options) || ""
-      end
-
-      def find_relative_url_root(options)
-        options.delete(:relative_url_root) || relative_url_root
+        options.delete(:script_name) || relative_url_root || ""
       end
 
       def path_for(options, route_name = nil, reserved = RESERVED_OPTIONS)

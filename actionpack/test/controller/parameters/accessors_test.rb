@@ -97,13 +97,6 @@ class ParametersAccessorsTest < ActiveSupport::TestCase
     assert_equal @params, ActionController::Parameters.new(@params.each_pair.to_h)
   end
 
-  test "deprecated comparison works" do
-    assert_kind_of Enumerator, @params.each_pair
-    assert_deprecated do
-      assert_equal @params, @params.each_pair.to_h
-    end
-  end
-
   test "each_value carries permitted status" do
     @params.permit!
     @params.each_value do |value|
@@ -154,6 +147,14 @@ class ParametersAccessorsTest < ActiveSupport::TestCase
   test "except retains unpermitted status" do
     assert_not_predicate @params.except(:person), :permitted?
     assert_not_predicate @params[:person].except(:name), :permitted?
+  end
+
+  test "exclude? returns true if the given key is not present in the params" do
+    assert @params.exclude?(:address)
+  end
+
+  test "exclude? returns false if the given key is present in the params" do
+    assert_not @params.exclude?(:person)
   end
 
   test "fetch retains permitted status" do

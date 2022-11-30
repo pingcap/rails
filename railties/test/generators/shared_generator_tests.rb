@@ -28,6 +28,24 @@ module SharedGeneratorTests
     destination_root
   end
 
+  def test_implied_options
+    generator([destination_root], ["--skip-active-job"])
+
+    assert_option :skip_action_mailer
+    assert_option :skip_active_storage
+    assert_option :skip_action_mailbox
+    assert_option :skip_action_text
+    assert_not_option :skip_active_record
+  end
+
+  def test_implied_options_with_conflicting_option
+    error = assert_raises do
+      run_generator [destination_root, "--skip-active-job", "--no-skip-active-storage"]
+    end
+
+    assert_match %r/conflicting option/i, error.message
+  end
+
   def test_skeleton_is_created
     run_generator
 
@@ -100,6 +118,7 @@ module SharedGeneratorTests
   def test_skip_git
     run_generator [destination_root, "--skip-git", "--full"]
     assert_no_file(".gitignore")
+    assert_no_file(".gitattributes")
     assert_no_directory(".git")
   end
 
@@ -278,6 +297,7 @@ module SharedGeneratorTests
     end
     assert_no_directory "#{application_path}/app/mailers"
     assert_no_directory "#{application_path}/test/mailers"
+    assert_no_file "#{application_path}/app/views/layouts/mailer.html.erb"
   end
 
   def test_generator_if_skip_action_cable_is_given
@@ -388,8 +408,21 @@ module SharedGeneratorTests
       end
     end
 
+    def assert_option(option)
+      assert generator.options[option], "Expected generator option #{option.inspect} to be truthy."
+    end
+
+    def assert_not_option(option)
+      assert_not generator.options[option], "Expected generator option #{option.inspect} to be falsy."
+    end
+
     def assert_gem(name, constraint = nil)
-      constraint_pattern = /, #{Regexp.escape constraint}/ if constraint
+      constraint_pattern =
+        if constraint.is_a?(String)
+          /, #{Regexp.escape constraint}/
+        elsif constraint
+          /, #{constraint}/
+        end
       assert_file "Gemfile", %r/^\s*gem ["']#{name}["']#{constraint_pattern}/
     end
 

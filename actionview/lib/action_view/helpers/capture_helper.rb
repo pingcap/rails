@@ -43,8 +43,14 @@ module ActionView
       def capture(*args)
         value = nil
         buffer = with_output_buffer { value = yield(*args) }
-        if (string = buffer.presence || value) && string.is_a?(String)
-          ERB::Util.html_escape string
+
+        case string = buffer.presence || value
+        when OutputBuffer
+          string.to_s
+        when ActiveSupport::SafeBuffer
+          string
+        when String
+          ERB::Util.html_escape(string)
         end
       end
 
@@ -121,7 +127,7 @@ module ActionView
       #     <li><%= link_to 'Home', action: 'index' %></li>
       #   <% end %>
       #
-      #  And in another place:
+      # And in another place:
       #
       #   <% content_for :navigation do %>
       #     <li><%= link_to 'Login', action: 'login' %></li>
@@ -137,7 +143,7 @@ module ActionView
       #     <li><%= link_to 'Home', action: 'index' %></li>
       #   <% end %>
       #
-      #   <%#  Add some other content, or use a different template: %>
+      #   <%# Add some other content, or use a different template: %>
       #
       #   <% content_for :navigation, flush: true do %>
       #     <li><%= link_to 'Login', action: 'login' %></li>

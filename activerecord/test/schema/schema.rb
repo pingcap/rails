@@ -17,6 +17,7 @@ ActiveRecord::Schema.define do
     t.string  :firm_name
     t.integer :credit_limit
     t.integer "a" * max_identifier_length
+    t.datetime :updated_at
   end
 
   create_table :admin_accounts, force: true do |t|
@@ -24,6 +25,21 @@ ActiveRecord::Schema.define do
   end
 
   create_table :admin_users, force: true do |t|
+    t.string :name
+    t.string :settings, null: true, limit: 1024
+    t.string :parent, null: true, limit: 1024
+    t.string :spouse, null: true, limit: 1024
+    t.string :configs, null: true, limit: 1024
+    # MySQL does not allow default values for blobs. Fake it out with a
+    # big varchar below.
+    t.string :preferences, null: true, default: "", limit: 1024
+    t.string :json_data, null: true, limit: 1024
+    t.string :json_data_empty, null: true, default: "", limit: 1024
+    t.text :params
+    t.references :account
+  end
+
+  create_table :admin_user_jsons, force: true do |t|
     t.string :name
     t.string :settings, null: true, limit: 1024
     t.string :parent, null: true, limit: 1024
@@ -141,7 +157,7 @@ ActiveRecord::Schema.define do
   create_table :encrypted_books, id: :integer, force: true do |t|
     t.references :author
     t.string :format
-    t.column :name, :string
+    t.column :name, :string, default: "<untitled>"
     t.column :original_name, :string
 
     t.datetime :created_at
@@ -215,6 +231,15 @@ ActiveRecord::Schema.define do
     t.references :book1
     t.references :book2
     t.references :citation
+  end
+
+  create_table :clothing_items, force: true do |t|
+    t.string :clothing_type
+    t.string :color
+    t.string :type
+    t.text :description
+
+    t.index [:clothing_type, :color], unique: true
   end
 
   create_table :clubs, force: true do |t|
@@ -442,8 +467,10 @@ ActiveRecord::Schema.define do
   end
 
   create_table :entries, force: true do |t|
-    t.string  :entryable_type, null: false
-    t.integer :entryable_id, null: false
+    t.string   :entryable_type, null: false
+    t.integer  :entryable_id, null: false
+    t.integer  :account_id, null: false
+    t.datetime :updated_at
   end
 
   create_table :essays, force: true do |t|
@@ -649,7 +676,8 @@ ActiveRecord::Schema.define do
   end
 
   create_table :messages, force: true do |t|
-    t.string :subject
+    t.string   :subject
+    t.datetime :updated_at
   end
 
   create_table :minivans, force: true, id: false do |t|
@@ -1254,6 +1282,11 @@ ActiveRecord::Schema.define do
     t.integer :hotel_id
   end
 
+  create_table :recipients, force: true do |t|
+    t.integer  :message_id
+    t.string   :email_address
+  end
+
   create_table :records, force: true do |t|
   end
 
@@ -1291,6 +1324,7 @@ ActiveRecord::Schema.define do
     t.string :auth_token
     t.string :password_digest
     t.string :recovery_password_digest
+    t.timestamps null: true
   end
 
   create_table :test_with_keyword_column_name, force: true do |t|
@@ -1300,6 +1334,11 @@ ActiveRecord::Schema.define do
   create_table :non_primary_keys, force: true, id: false do |t|
     t.integer :id
     t.datetime :created_at
+  end
+
+  create_table :toooooooooooooooooooooooooooooooooo_long_table_names, force: true do |t|
+    t.bigint :toooooooo_long_a_id, null: false
+    t.bigint :toooooooo_long_b_id, null: false
   end
 end
 

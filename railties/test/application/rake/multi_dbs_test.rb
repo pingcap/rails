@@ -304,13 +304,15 @@ module ApplicationTests
             down_output = rails("db:migrate:down:#{namespace}", "VERSION=#{version}")
             up_output = rails("db:migrate:up:#{namespace}", "VERSION=#{version}")
           else
-            assert_raises RuntimeError, /You're using a multiple database application/ do
+            exception = assert_raises RuntimeError do
               down_output = rails("db:migrate:down", "VERSION=#{version}")
             end
+            assert_match("You're using a multiple database application", exception.message)
 
-            assert_raises RuntimeError, /You're using a multiple database application/ do
+            exception = assert_raises RuntimeError do
               up_output = rails("db:migrate:up", "VERSION=#{version}")
             end
+            assert_match("You're using a multiple database application", exception.message)
           end
 
           case namespace
@@ -333,9 +335,10 @@ module ApplicationTests
           if namespace
             rollback_output = rails("db:rollback:#{namespace}")
           else
-            assert_raises RuntimeError, /You're using a multiple database application/ do
+            exception = assert_raises RuntimeError do
               rollback_output = rails("db:rollback")
             end
+            assert_match("You're using a multiple database application", exception.message)
           end
 
           case namespace
@@ -358,9 +361,10 @@ module ApplicationTests
           if namespace
             redo_output = rails("db:migrate:redo:#{namespace}")
           else
-            assert_raises RuntimeError, /You're using a multiple database application/ do
+            exception = assert_raises RuntimeError do
               redo_output = rails("db:migrate:redo")
             end
+            assert_match("You're using a multiple database application", exception.message)
           end
 
           case namespace
@@ -753,6 +757,20 @@ module ApplicationTests
         db_migrate_and_schema_cache_dump
       end
 
+      test "db:prepare setup the database even if schema does not exist" do
+        Dir.chdir(app_path) do
+          use_postgresql(multi_db: true) # bug doesn't exist with sqlite3
+          output = rails("db:drop")
+          assert_match(/Dropped database/, output)
+
+          rails "generate", "model", "recipe", "title:string"
+          output = rails("db:prepare")
+          assert_match(/CreateRecipes: migrated/, output)
+        end
+      ensure
+        rails "db:drop" rescue nil
+      end
+
       # Note that schema cache loader depends on the connection and
       # does not work for all connections.
       test "schema_cache is loaded on primary db in multi-db app" do
@@ -803,6 +821,38 @@ module ApplicationTests
         assert_match(/You have 1 pending migration/, output)
       end
 
+      test "db:version works on all databases" do
+        require "#{app_path}/config/environment"
+        Dir.chdir(app_path) do
+          generate_models_for_animals
+          primary_version = File.basename(Dir[File.join(app_path, "db", "migrate", "*.rb")].first).to_i
+          animals_version = File.basename(Dir[File.join(app_path, "db", "animals_migrate", "*.rb")].first).to_i
+
+          rails("db:migrate")
+          output = rails("db:version")
+
+          assert_match(/database: db\/development.sqlite3\nCurrent version: #{primary_version}/, output)
+          assert_match(/database: db\/development_animals.sqlite3\nCurrent version: #{animals_version}/, output)
+        end
+      end
+
+      test "db:version:namespace works" do
+        require "#{app_path}/config/environment"
+        Dir.chdir(app_path) do
+          generate_models_for_animals
+          primary_version = File.basename(Dir[File.join(app_path, "db", "migrate", "*.rb")].first).to_i
+          animals_version = File.basename(Dir[File.join(app_path, "db", "animals_migrate", "*.rb")].first).to_i
+
+          rails("db:migrate")
+
+          output = rails("db:version:primary")
+          assert_match(/Current version: #{primary_version}/, output)
+
+          output = rails("db:version:animals")
+          assert_match(/Current version: #{animals_version}/, output)
+        end
+      end
+
       test "db:setup works on all databases" do
         require "#{app_path}/config/environment"
         db_setup
@@ -845,6 +895,28 @@ module ApplicationTests
           output = rails("db:prepare")
 
           assert_match(/Created database/, output)
+          assert_equal 1, Dog.count
+        ensure
+          Dog.connection.disconnect!
+          rails "db:drop" rescue nil
+        end
+      end
+
+      test "db:prepare runs seeds once" do
+        require "#{app_path}/config/environment"
+        Dir.chdir(app_path) do
+          use_postgresql(multi_db: true)
+
+          rails "db:drop"
+          generate_models_for_animals
+          rails "generate", "model", "recipe", "title:string"
+
+          app_file "db/seeds.rb", <<-RUBY
+            Dog.create!
+          RUBY
+
+          rails("db:prepare")
+
           assert_equal 1, Dog.count
         ensure
           Dog.connection.disconnect!
@@ -916,6 +988,19 @@ module ApplicationTests
         RUBY
 
         db_create_and_drop_namespace("primary", "db/development.sqlite3")
+      end
+
+      test "db:create and db:drop don't raise errors when loading YAML containing ERB in database keys" do
+        app_file "config/database.yml", <<-YAML
+          development:
+            <% 5.times do |i| %>
+            shard_<%= i %>:
+              database: db/development_shard_<%= i %>.sqlite3
+              adapter: sqlite3
+            <% end %>
+        YAML
+
+        db_create_and_drop_namespace("shard_3", "db/development_shard_3.sqlite3")
       end
 
       test "schema generation when dump_schema_after_migration is true schema_dump is false" do
@@ -1021,6 +1106,27 @@ module ApplicationTests
 
           assert File.exist?("db/schema.rb"), "should dump schema when configured to"
           assert File.exist?("db/secondary_schema.rb"), "should dump schema when configured to"
+        end
+      end
+
+      test "db:test:prepare don't raise errors when schema_dump is false" do
+        app_file "config/database.yml", <<~EOS
+          development: &development
+            primary:
+              adapter: sqlite3
+              database: dev_db
+              schema_dump: false
+            secondary:
+              adapter: sqlite3
+              database: secondary_dev_db
+              schema_dump: false
+          test:
+            <<: *development
+        EOS
+
+        Dir.chdir(app_path) do
+          output = rails("db:test:prepare", "--trace")
+          assert_match(/Execute db:test:prepare/, output)
         end
       end
 
@@ -1151,6 +1257,49 @@ module ApplicationTests
             error = assert_raises("#{task} did not raise ActiveRecord::ProtectedEnvironmentError") { rails task }
             assert_match(/ActiveRecord::ProtectedEnvironmentError/, error.message)
           end
+        end
+      end
+
+      test "after schema is loaded test run on the correct connections" do
+        require "#{app_path}/config/environment"
+        app_file "config/database.yml", <<-YAML
+          development:
+            primary:
+              database: db/default.sqlite3
+              adapter: sqlite3
+            animals:
+              database: db/development_animals.sqlite3
+              adapter: sqlite3
+              migrations_paths: db/animals_migrate
+          test:
+            primary:
+              database: db/default_test.sqlite3
+              adapter: sqlite3
+            animals:
+              database: db/test_animals.sqlite3
+              adapter: sqlite3
+              migrations_paths: db/animals_migrate
+        YAML
+
+        Dir.chdir(app_path) do
+          generate_models_for_animals
+
+          File.open("test/models/book_test.rb", "w") do |file|
+            file.write(<<~EOS)
+              require "test_helper"
+
+              class BookTest < ActiveSupport::TestCase
+                test "a book" do
+                  assert Book.first
+                end
+              end
+            EOS
+          end
+
+          rails "db:migrate"
+          rails "db:schema:dump"
+          output = rails "test"
+          assert_match(/1 runs, 1 assertions, 0 failures, 0 errors, 0 skips/, output)
         end
       end
     end

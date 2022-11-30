@@ -8,12 +8,11 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
 
   def setup
     @conn = ActiveRecord::Base.connection
-    @connection_handler = ActiveRecord::Base.connection_handler
   end
 
   def test_connection_error
     assert_raises ActiveRecord::ConnectionNotEstablished do
-      ActiveRecord::Base.mysql2_connection(socket: File::NULL)
+      ActiveRecord::Base.mysql2_connection(socket: File::NULL, prepared_statements: false).connect!
     end
   end
 
@@ -53,7 +52,7 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
       end
     end.new
 
-    assert_deprecated do
+    assert_deprecated(ActiveRecord.deprecator) do
       ActiveRecord::ConnectionAdapters::Mysql2Adapter.new(
         fake_connection,
         ActiveRecord::Base.logger,
@@ -62,7 +61,7 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
       )
     end
 
-    assert_not_deprecated do
+    assert_not_deprecated(ActiveRecord.deprecator) do
       ActiveRecord::ConnectionAdapters::Mysql2Adapter.new(
         fake_connection,
         ActiveRecord::Base.logger,
@@ -70,6 +69,31 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
         { socket: File::NULL, prepared_statements: false }
       )
     end
+  end
+
+  def test_mysql2_default_prepared_statements
+    fake_connection = Class.new do
+      def query_options
+        {}
+      end
+
+      def query(*)
+      end
+
+      def close
+      end
+    end.new
+
+    adapter = ActiveRecord.deprecator.silence do
+      ActiveRecord::ConnectionAdapters::Mysql2Adapter.new(
+        fake_connection,
+        ActiveRecord::Base.logger,
+        nil,
+        { socket: File::NULL }
+      )
+    end
+
+    assert_equal false, adapter.prepared_statements
   end
 
   def test_exec_query_nothing_raises_with_no_result_queries
@@ -151,6 +175,33 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
     assert_not_nil error.cause
   ensure
     @conn.execute("ALTER TABLE engines DROP COLUMN old_car_id") rescue nil
+  end
+
+  def test_errors_for_multiple_fks_on_mismatched_types_for_pk_table_in_alter_table
+    skip "MariaDB does not return mismatched foreign key in error message" if @conn.mariadb?
+
+    begin
+      error = assert_raises(ActiveRecord::MismatchedForeignKey) do
+        # we should add matched foreign key first to properly test error parsing
+        @conn.add_reference :engines, :person, foreign_key: true
+
+        # table old_cars has primary key of integer
+        @conn.add_reference :engines, :old_car, foreign_key: true
+      end
+
+      assert_match(
+        %r/Column `old_car_id` on table `engines` does not match column `id` on `old_cars`, which has type `int(\(11\))?`\./,
+        error.message
+      )
+      assert_match(
+        %r/To resolve this issue, change the type of the `old_car_id` column on `engines` to be :integer\. \(For example `t.integer :old_car_id`\)\./,
+        error.message
+      )
+      assert_not_nil error.cause
+    ensure
+      @conn.remove_reference(:engines, :person)
+      @conn.remove_reference(:engines, :old_car)
+    end
   end
 
   def test_errors_for_bigint_fks_on_integer_pk_table_in_create_table
@@ -260,6 +311,14 @@ class Mysql2AdapterTest < ActiveRecord::Mysql2TestCase
       raw_conn.stub(:query, ->(_sql) { raise Mysql2::Error.new("fail", 50700, ActiveRecord::ConnectionAdapters::AbstractMysqlAdapter::ER_QUERY_TIMEOUT) }) {
         @conn.execute("SELECT 1")
       }
+    end
+  end
+
+  def test_database_timezone_changes_synced_to_connection
+    with_timezone_config default: :local do
+      assert_changes(-> { @conn.raw_connection.query_options[:database_timezone] }, from: :utc, to: :local) do
+        @conn.execute("SELECT 1")
+      end
     end
   end
 

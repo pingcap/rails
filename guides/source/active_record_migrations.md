@@ -134,7 +134,7 @@ class AddPartNumberToProducts < ActiveRecord::Migration[7.1]
 end
 ```
 
-This generator can do much more than append a timestamp to the file name.
+This generator can do much more than prepend a timestamp to the file name.
 Based on naming conventions and additional (optional) arguments it can
 also start fleshing out the migration.
 
@@ -352,10 +352,10 @@ end
 which creates a `products` table with a column called `name`.
 
 By default, `create_table` will create a primary key called `id`. You can change
-the name of the primary key with the `:primary_key` option (don't forget to
-update the corresponding model) or, if you don't want a primary key at all, you
-can pass the option `id: false`. If you need to pass database specific options
-you can place an SQL fragment in the `:options` option. For example:
+the name of the primary key with the `:primary_key` option  or, if you don't
+want a primary key at all, you can pass the option `id: false`. If you need to
+pass database specific options you can place an SQL fragment in the `:options`
+option. For example:
 
 ```ruby
 create_table :products, options: "ENGINE=BLACKHOLE" do |t|
@@ -509,7 +509,7 @@ add_reference :users, :role
 ```
 
 This migration will create a `role_id` column in the users table. It creates an
-index for this column as well, unless explicitly told not with the
+index for this column as well, unless explicitly told not to with the
 `index: false` option:
 
 ```ruby
@@ -603,23 +603,26 @@ and
 ### Using the `change` Method
 
 The `change` method is the primary way of writing migrations. It works for the
-majority of cases, where Active Record knows how to reverse the migration
-automatically. Currently, the `change` method supports only these migration
-definitions:
+majority of cases in which Active Record knows how to reverse a migration's
+actions automatically. Below are some of the actions that `change` supports:
 
+* [`add_check_constraint`][]
 * [`add_column`][]
 * [`add_foreign_key`][]
 * [`add_index`][]
 * [`add_reference`][]
 * [`add_timestamps`][]
+* [`change_column_comment`][] (must supply a `:from` and `:to` option)
 * [`change_column_default`][] (must supply a `:from` and `:to` option)
 * [`change_column_null`][]
+* [`change_table_comment`][] (must supply a `:from` and `:to` option)
 * [`create_join_table`][]
 * [`create_table`][]
 * `disable_extension`
 * [`drop_join_table`][]
 * [`drop_table`][] (must supply a block)
 * `enable_extension`
+* [`remove_check_constraint`][] (must supply a constraint expression)
 * [`remove_column`][] (must supply a type)
 * [`remove_foreign_key`][] (must supply a second table)
 * [`remove_index`][]
@@ -643,10 +646,14 @@ remove_column :posts, :slug, :string, null: false, default: ''
 If you're going to need to use any other methods, you should use `reversible`
 or write the `up` and `down` methods instead of using the `change` method.
 
+[`add_check_constraint`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_check_constraint
 [`add_foreign_key`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_foreign_key
 [`add_timestamps`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-add_timestamps
+[`change_column_comment`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_column_comment
+[`change_table_comment`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-change_table_comment
 [`drop_join_table`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-drop_join_table
 [`drop_table`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-drop_table
+[`remove_check_constraint`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_check_constraint
 [`remove_foreign_key`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_foreign_key
 [`remove_index`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_index
 [`remove_reference`]: https://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/SchemaStatements.html#method-i-remove_reference

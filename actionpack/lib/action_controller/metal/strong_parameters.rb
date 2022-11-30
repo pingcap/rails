@@ -64,6 +64,13 @@ module ActionController
     end
   end
 
+  # Raised when initializing Parameters with keys that aren't strings or symbols.
+  #
+  #   ActionController::Parameters.new(123 => 456)
+  #   # => ActionController::InvalidParameterKey: all keys must be Strings or Symbols, got: Integer
+  class InvalidParameterKey < ArgumentError
+  end
+
   # == Action Controller \Parameters
   #
   # Allows you to choose which attributes should be permitted for mass updating
@@ -160,20 +167,20 @@ module ActionController
     # Returns true if the parameters have no key/value pairs.
 
     ##
+    # :method: exclude?
+    #
+    # :call-seq:
+    #   exclude?(key)
+    #
+    # Returns true if the given key is not present in the parameters.
+
+    ##
     # :method: has_key?
     #
     # :call-seq:
     #   has_key?(key)
     #
     # Returns true if the given key is present in the parameters.
-
-    ##
-    # :method: has_value?
-    #
-    # :call-seq:
-    #   has_value?(value)
-    #
-    # Returns true if the given value is present for some key in the parameters.
 
     ##
     # :method: include?
@@ -215,14 +222,7 @@ module ActionController
     #
     # Returns the content of the parameters as a string.
 
-    ##
-    # :method: value?
-    #
-    # :call-seq:
-    #   value?(value)
-    #
-    # Returns true if the given value is present for some key in the parameters.
-    delegate :keys, :key?, :has_key?, :member?, :has_value?, :value?, :empty?, :include?,
+    delegate :keys, :key?, :has_key?, :member?, :empty?, :exclude?, :include?,
       :as_json, :to_s, :each_key, to: :@parameters
 
     # By default, never raise an UnpermittedParameters exception if these
@@ -233,6 +233,8 @@ module ActionController
     #
     #    config.action_controller.always_permitted_parameters = %w( controller action format )
     cattr_accessor :always_permitted_parameters, default: %w( controller action )
+
+    cattr_accessor :allow_deprecated_parameters_hash_equality, default: true, instance_accessor: false
 
     class << self
       def nested_attribute?(key, value) # :nodoc:
@@ -257,6 +259,12 @@ module ActionController
     #   params.permitted?  # => true
     #   Person.new(params) # => #<Person id: nil, name: "Francesco">
     def initialize(parameters = {}, logging_context = {})
+      parameters.each_key do |key|
+        unless key.is_a?(String) || key.is_a?(Symbol)
+          raise InvalidParameterKey, "all keys must be Strings or Symbols, got: #{key.class}"
+        end
+      end
+
       @parameters = parameters.with_indifferent_access
       @logging_context = logging_context
       @permitted = self.class.permit_all_parameters
@@ -268,13 +276,15 @@ module ActionController
       if other.respond_to?(:permitted?)
         permitted? == other.permitted? && parameters == other.parameters
       else
-        if Hash === other
-          ActiveSupport::Deprecation.warn <<-WARNING.squish
+        if self.class.allow_deprecated_parameters_hash_equality && Hash === other
+          ActionController.deprecator.warn <<-WARNING.squish
             Comparing equality between `ActionController::Parameters` and a
             `Hash` is deprecated and will be removed in Rails 7.2. Please only do
             comparisons between instances of `ActionController::Parameters`. If
             you need to compare to a hash, first convert it using
             `ActionController::Parameters#new`.
+            To disable the deprecated behavior set
+            `Rails.application.config.action_controller.allow_deprecated_parameters_hash_equality = false`.
           WARNING
           @parameters == other
         else
@@ -282,10 +292,15 @@ module ActionController
         end
       end
     end
-    alias eql? ==
+
+    def eql?(other)
+      self.class == other.class &&
+        permitted? == other.permitted? &&
+        parameters.eql?(other.parameters)
+    end
 
     def hash
-      [@parameters.hash, @permitted].hash
+      [self.class, @parameters, @permitted].hash
     end
 
     # Returns a safe <tt>ActiveSupport::HashWithIndifferentAccess</tt>
@@ -839,6 +854,13 @@ module ActionController
     def compact_blank!
       reject! { |_k, v| v.blank? }
     end
+
+    # Returns true if the given value is present for some key in the parameters.
+    def has_value?(value)
+      each_value.include?(convert_value_to_parameters(value))
+    end
+
+    alias value? has_value?
 
     # Returns values that were assigned to the given +keys+. Note that all the
     # +Hash+ objects will be converted to <tt>ActionController::Parameters</tt>.

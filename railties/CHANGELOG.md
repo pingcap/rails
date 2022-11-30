@@ -1,3 +1,323 @@
+*   Add `config.precompile_filter_parameters`, which enables precompilation of
+    `config.filter_parameters` using `ActiveSupport::ParameterFilter.precompile_filters`.
+    Precompilation can improve filtering performance, depending on the quantity
+    and types of filters.
+
+    `config.precompile_filter_parameters` defaults to `true` for
+    `config.load_defaults 7.1` and above.
+
+    *Jonathan Hefner*
+
+*   Add `after_routes_loaded` hook to `Rails::Railtie::Configuration` for
+    engines to add a hook to be called after application routes have been
+    loaded.
+
+    ```ruby
+    MyEngine.config.after_routes_loaded do
+      # code that must happen after routes have been loaded
+    end
+    ```
+
+    *Chris Salzberg*
+
+*   Send 303 See Other status code back for the destroy action on newly generated
+    scaffold controllers.
+
+    *Tony Drake*
+
+*   Add `Rails.application.deprecators` as a central point to manage deprecators
+    for an application.
+
+    Individual deprecators can be added and retrieved from the collection:
+
+    ```ruby
+    Rails.application.deprecators[:my_gem] = ActiveSupport::Deprecation.new("2.0", "MyGem")
+    Rails.application.deprecators[:other_gem] = ActiveSupport::Deprecation.new("3.0", "OtherGem")
+    ```
+
+    And the collection's configuration methods affect all deprecators in the
+    collection:
+
+    ```ruby
+    Rails.application.deprecators.debug = true
+
+    Rails.application.deprecators[:my_gem].debug
+    # => true
+    Rails.application.deprecators[:other_gem].debug
+    # => true
+    ```
+
+    Additionally, all deprecators in the collection can be silenced for the
+    duration of a given block:
+
+    ```ruby
+    Rails.application.deprecators.silence do
+      Rails.application.deprecators[:my_gem].warn    # => silenced (no warning)
+      Rails.application.deprecators[:other_gem].warn # => silenced (no warning)
+    end
+    ```
+
+    *Jonathan Hefner*
+
+*   Move dbconsole logic to Active Record connection adapter.
+
+    Instead of hosting the connection logic in the command object, the
+    database adapter should be responsible for connecting to a console session.
+    This patch moves #find_cmd_and_exec to the adapter and exposes a new API to
+    lookup the adapter class without instantiating it.
+
+    *Gannon McGibbon*, *Paarth Madan*
+
+*   Add `Rails.application.message_verifiers` as a central point to configure
+    and create message verifiers for an application.
+
+    This allows applications to, for example, rotate old `secret_key_base`
+    values:
+
+    ```ruby
+    config.before_initialize do |app|
+      app.message_verifiers.rotate(secret_key_base: "old secret_key_base")
+    end
+    ```
+
+    And for libraries to create preconfigured message verifiers:
+
+    ```ruby
+    ActiveStorage.verifier = Rails.application.message_verifiers["ActiveStorage"]
+    ```
+
+    *Jonathan Hefner*
+
+*   Support MySQL's ssl-mode option for the dbconsole command.
+
+    Verifying the identity of the database server requires setting the ssl-mode
+    option to VERIFY_CA or VERIFY_IDENTITY. This option was previously ignored
+    for the dbconsole command.
+
+    *Petrik de Heus*
+
+*   Delegate application record generator description to orm hooked generator.
+
+    *Gannon McGibbon*
+
+*   Show BCC recipients when present in Action Mailer previews.
+
+    *Akshay Birajdar*
+
+*   Extend `routes --grep` to also filter routes by matching against path.
+
+    Example:
+
+    ```
+    > bin/rails routes --grep /cats/1
+    Prefix Verb   URI Pattern         Controller#Action
+       cat GET    /cats/:id(.:format) cats#show
+           PATCH  /cats/:id(.:format) cats#update
+           PUT    /cats/:id(.:format) cats#update
+           DELETE /cats/:id(.:format) cats#destroy
+    ```
+
+    *Orhan Toy*
+
+*   Improve `rails runner` output when given a file path that doesn't exist.
+
+    *Tekin Suleyman*
+
+*   `config.allow_concurrency = false` now use a `Monitor` instead of a `Mutex`
+
+    This allows to enable `config.active_support.executor_around_test_case` even
+    when `config.allow_concurrency` is disabled.
+
+    *Jean Boussier*
+
+*   Add `routes --unused` option to detect extraneous routes.
+
+    Example:
+
+    ```
+    > bin/rails routes --unused
+
+    Found 2 unused routes:
+
+    Prefix Verb URI Pattern    Controller#Action
+       one GET  /one(.:format) action#one
+       two GET  /two(.:format) action#two
+    ```
+
+    *Gannon McGibbon*
+
+*   Add `--parent` option to controller generator to specify parent class of job.
+
+    Example:
+
+    `bin/rails g controller admin/users --parent=admin_controller` generates:
+
+    ```ruby
+    class Admin::UsersController < AdminController
+      # ...
+    end
+    ```
+
+    *Gannon McGibbon*
+
+*   In-app custom credentials templates are now supported.  When a credentials
+    file does not exist, `rails credentials:edit` will now try to use
+    `lib/templates/rails/credentials/credentials.yml.tt` to generate the
+    credentials file, before falling back to the default template.
+
+    This allows e.g. an open-source Rails app (which would not include encrypted
+    credentials files in its repo) to include a credentials template, so that
+    users who install the app will get a custom pre-filled credentials file when
+    they run `rails credentials:edit`.
+
+    *Jonathan Hefner*
+
+*   Except for `dev` and `test` environments, newly generated per-environment
+    credentials files (e.g. `config/credentials/production.yml.enc`) now include
+    a `secret_key_base` for convenience, just as `config/credentials.yml.enc`
+    does.
+
+    *Jonathan Hefner*
+
+*   `--no-*` options now work with the app generator's `--minimal` option, and
+    are both comprehensive and precise.  For example:
+
+    ```console
+    $ rails new my_cool_app --minimal
+    Based on the specified options, the following options will also be activated:
+
+      --skip-active-job [due to --minimal]
+      --skip-action-mailer [due to --skip-active-job, --minimal]
+      --skip-active-storage [due to --skip-active-job, --minimal]
+      --skip-action-mailbox [due to --skip-active-storage, --minimal]
+      --skip-action-text [due to --skip-active-storage, --minimal]
+      --skip-javascript [due to --minimal]
+      --skip-hotwire [due to --skip-javascript, --minimal]
+      --skip-action-cable [due to --minimal]
+      --skip-bootsnap [due to --minimal]
+      --skip-dev-gems [due to --minimal]
+      --skip-system-test [due to --minimal]
+
+    ...
+
+    $ rails new my_cool_app --minimal --no-skip-active-storage
+    Based on the specified options, the following options will also be activated:
+
+      --skip-action-mailer [due to --minimal]
+      --skip-action-mailbox [due to --minimal]
+      --skip-action-text [due to --minimal]
+      --skip-javascript [due to --minimal]
+      --skip-hotwire [due to --skip-javascript, --minimal]
+      --skip-action-cable [due to --minimal]
+      --skip-bootsnap [due to --minimal]
+      --skip-dev-gems [due to --minimal]
+      --skip-system-test [due to --minimal]
+
+    ...
+    ```
+
+    *Brad Trick* and *Jonathan Hefner*
+
+*   Add `--skip-dev-gems` option to app generator to skip adding development
+    gems (like `web-console`) to the Gemfile.
+
+    *Brad Trick*
+
+*   Skip Active Storage and Action Mailer if Active Job is skipped.
+
+    *Étienne Barrié*
+
+*   Correctly check if frameworks are disabled when running app:update.
+
+    *Étienne Barrié* and *Paulo Barros*
+
+*   Delegate model generator description to orm hooked generator.
+
+    *Gannon McGibbon*
+
+*   Execute `rails runner` scripts inside the executor.
+
+    Enables error reporting, query cache, etc.
+
+    *Jean Boussier*
+
+*   Avoid booting in development then test for test tasks.
+
+    Running one of the rails test subtasks (e.g. test:system, test:models) would
+    go through Rake and cause the app to be booted twice. Now all the test:*
+    subtasks are defined as Thor tasks and directly load the test environment.
+
+    *Étienne Barrié*
+
+*   Deprecate `Rails::Generators::Testing::Behaviour` in favor of `Rails::Generators::Testing::Behavior`.
+
+    *Gannon McGibbon*
+
+*   Allow configuration of logger size for local and test environments
+
+    `config.log_file_size`
+
+    Defaults to `100` megabytes.
+
+    *Bernie Chiu*
+
+*   Enroll new apps in decrypted diffs of credentials by default.  This behavior
+    can be opted out of with the app generator's `--skip-decrypted-diffs` flag.
+
+    *Jonathan Hefner*
+
+*   Support declarative-style test name filters with `bin/rails test`.
+
+    This makes it possible to run a declarative-style test such as:
+
+    ```ruby
+    class MyTest < ActiveSupport::TestCase
+      test "does something" do
+        # ...
+      end
+    end
+    ```
+
+    Using its declared name:
+
+    ```bash
+    $ bin/rails test test/my_test.rb -n "does something"
+    ```
+
+    Instead of having to specify its expanded method name:
+
+    ```bash
+    $ bin/rails test test/my_test.rb -n test_does_something
+    ```
+
+    *Jonathan Hefner*
+
+*   Add `--js` and `--skip-javascript` options to `rails new`
+
+    `--js` alias to `rails new --javascript ...`
+
+    Same as `-j`, e.g. `rails new --js esbuild ...`
+
+    `--skip-js` alias to `rails new --skip-javascript ...`
+
+    Same as `-J`, e.g. `rails new --skip-js ...`
+
+    *Dorian Marié*
+
+*   Allow relative paths with leading dot slash to be passed to `rails test`.
+
+    Fix `rails test ./test/model/post_test.rb` to run a single test file.
+
+    *Shouichi Kamiya* and *oljfte*
+
+*   Deprecate `config.enable_dependency_loading`. This flag addressed a limitation of the `classic` autoloader and has no effect nowadays. To fix this deprecation, please just delete the reference.
+
+    *Xavier Noria*
+
+*   Define `config.enable_reloading` to be `!config.cache_classes` for a more intuitive name. While `config.enable_reloading` and `config.reloading_enabled?` are preferred from now on, `config.cache_classes` is supported for backwards compatibility.
+
+    *Xavier Noria*
+
 *   Add JavaScript dependencies installation on bin/setup
 
     Add  `yarn install` to bin/setup when using esbuild, webpack, or rollout.

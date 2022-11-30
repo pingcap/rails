@@ -70,7 +70,7 @@ WARNING: Some method names are reserved by Action Controller. Accidentally redef
 NOTE: If you must use a reserved method as an action name, one workaround is to use a custom route to map the reserved method name to your non-reserved action method.
 
 [`ActionController::Base`]: https://api.rubyonrails.org/classes/ActionController/Base.html
-[Resource Routing]: https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default
+[Resource Routing]: routing.html#resource-routing-the-rails-default
 
 Parameters
 ----------
@@ -142,7 +142,7 @@ When this form is submitted, the value of `params[:client]` will be `{ "name" =>
 
 The `params` object acts like a Hash, but lets you use symbols and strings interchangeably as keys.
 
-### JSON parameters
+### JSON Parameters
 
 If you're writing a web service application, you might find yourself more comfortable accepting parameters in JSON format. If the "Content-Type" header of your request is set to "application/json", Rails will automatically load your parameters into the `params` hash, which you can access as you would normally.
 
@@ -378,8 +378,11 @@ Your application has a session for each user in which you can store small amount
 
 * [`ActionDispatch::Session::CookieStore`][] - Stores everything on the client.
 * [`ActionDispatch::Session::CacheStore`][] - Stores the data in the Rails cache.
-* `ActionDispatch::Session::ActiveRecordStore` - Stores the data in a database using Active Record (requires the `activerecord-session_store` gem).
 * [`ActionDispatch::Session::MemCacheStore`][] - Stores the data in a memcached cluster (this is a legacy implementation; consider using `CacheStore` instead).
+* [`ActionDispatch::Session::ActiveRecordStore`][activerecord-session_store] -
+  Stores the data in a database using Active Record (requires the
+  [`activerecord-session_store`][activerecord-session_store] gem)
+* A custom store or a store provided by a third party gem
 
 All session stores use a cookie to store a unique ID for each session (you must use a cookie, Rails will not allow you to pass the session ID in the URL as this is less secure).
 
@@ -394,11 +397,11 @@ Read more about session storage in the [Security Guide](security.html).
 If you need a different session storage mechanism, you can change it in an initializer:
 
 ```ruby
-# Use the database for sessions instead of the cookie-based default,
-# which shouldn't be used to store highly confidential information
-# (create the session table with "rails g active_record:session_migration")
-# Rails.application.config.session_store :active_record_store
+Rails.application.config.session_store :cache_store
 ```
+
+See [`config.session_store`](configuring.html#config-session-store) in the
+configuration guide for more information.
 
 Rails sets up a session key (the name of the cookie) when signing the session data. These can also be changed in an initializer:
 
@@ -430,6 +433,8 @@ NOTE: Changing the secret_key_base when using the `CookieStore` will invalidate 
 [`ActionDispatch::Session::CookieStore`]: https://api.rubyonrails.org/classes/ActionDispatch/Session/CookieStore.html
 [`ActionDispatch::Session::CacheStore`]: https://api.rubyonrails.org/classes/ActionDispatch/Session/CacheStore.html
 [`ActionDispatch::Session::MemCacheStore`]: https://api.rubyonrails.org/classes/ActionDispatch/Session/MemCacheStore.html
+[activerecord-session_store]: https://github.com/rails/activerecord-session_store
+
 
 ### Accessing the Session
 
@@ -481,7 +486,7 @@ class LoginsController < ApplicationController
     session.delete(:current_user_id)
     # Clear the memoized current user
     @_current_user = nil
-    redirect_to root_url
+    redirect_to root_url, status: :see_other
   end
 end
 ```
@@ -503,7 +508,7 @@ class LoginsController < ApplicationController
   def destroy
     session.delete(:current_user_id)
     flash[:notice] = "You have successfully logged out."
-    redirect_to root_url
+    redirect_to root_url, status: :see_other
   end
 end
 ```
@@ -675,7 +680,7 @@ If you use the cookie session store, this would apply to the `session` and
 
 [`cookies`]: https://api.rubyonrails.org/classes/ActionController/Cookies.html#method-i-cookies
 
-Rendering XML and JSON data
+Rendering XML and JSON Data
 ---------------------------
 
 ActionController makes it extremely easy to render `XML` or `JSON` data. If you've generated a controller using scaffolding, it would look something like this:
@@ -1269,7 +1274,7 @@ NOTE: Certain exceptions are only rescuable from the `ApplicationController` cla
 
 [`rescue_from`]: https://api.rubyonrails.org/classes/ActiveSupport/Rescuable/ClassMethods.html#method-i-rescue_from
 
-Force HTTPS protocol
+Force HTTPS Protocol
 --------------------
 
 If you'd like to ensure that communication to your controller is only possible

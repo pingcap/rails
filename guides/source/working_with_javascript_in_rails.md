@@ -17,7 +17,7 @@ your JavaScript.
 
 --------------------------------------------------------------------------------
 
-Import maps
+Import Maps
 -----------
 
 [Import maps](https://github.com/rails/importmap-rails) let you import JavaScript modules using
@@ -31,6 +31,20 @@ manage your JavaScript dependencies, there is no need to install Node.js or Yarn
 
 When using import maps, no separate build process is required, just start your server with
 `bin/rails server` and you are good to go.
+
+### Installing importmap-rails
+
+Importmap for Rails is automatically included in Rails 7+ for new applications, but you can also install it manually in existing applications:
+
+```bash
+$ bin/bundle add importmap-rails
+```
+
+Run the install task:
+
+```bash
+$ bin/rails importmap:install
+```
 
 ### Adding NPM Packages with importmap-rails
 
@@ -274,5 +288,11 @@ trigger it on submit. For example:
 This generates:
 
 ```html
-<a href="..." data-confirm="Are you sure?" data-turbo-method="delete">Delete post</a>
+<a href="..." data-turbo-confirm="Are you sure?" data-turbo-method="delete">Delete post</a>
+```
+
+In case of buttons the `data-turbo-confirm` attribute must be associated to the generated form as in this example:
+
+```erb
+<%= button_to "Delete post", post, method: :delete, form: { data: { turbo_confirm: "Are you sure?" } } %>
 ```

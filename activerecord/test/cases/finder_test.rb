@@ -24,8 +24,11 @@ require "models/tyre"
 require "models/subscriber"
 require "models/non_primary_key"
 require "support/stubs/strong_parameters"
+require "support/async_helper"
 
 class FinderTest < ActiveRecord::TestCase
+  include AsyncHelper
+
   fixtures :companies, :topics, :entrants, :developers, :developers_projects, :posts, :comments, :accounts, :authors, :author_addresses, :customers, :categories, :categorizations, :cars
   def teardown
     Subscriber.delete_all
@@ -50,6 +53,16 @@ class FinderTest < ActiveRecord::TestCase
   def test_find_with_hash_parameter
     assert_raises(ActiveRecord::RecordNotFound) { Post.find(foo: "bar") }
     assert_raises(ActiveRecord::RecordNotFound) { Post.find(foo: "bar", bar: "baz") }
+  end
+
+  def test_find_with_custom_select_excluding_id
+    # Returns ordered by ids array
+    topics = Topic.select(:title).find([4, 2, 5])
+    assert_equal [4, 2, 5], topics.map(&:id)
+
+    # Custom order
+    topics = Topic.select(:title).order(:id).find([4, 2, 5])
+    assert_equal [2, 4, 5], topics.map(&:id)
   end
 
   def test_find_with_proc_parameter_and_block
@@ -605,6 +618,8 @@ class FinderTest < ActiveRecord::TestCase
 
     assert_equal(1, topics.size)
     assert_equal(topics(:second).title, topics.first.title)
+
+    assert_async_equal topics,  Topic.async_find_by_sql("SELECT * FROM topics WHERE author_name = 'Mary'")
   end
 
   def test_find_with_prepared_select_statement
@@ -867,6 +882,17 @@ class FinderTest < ActiveRecord::TestCase
     Topic.delete_all
     assert_raises_with_message ActiveRecord::RecordNotFound, "Couldn't find Topic" do
       Topic.third_to_last!
+    end
+  end
+
+  def test_nth_to_last_with_order_uses_limit
+    c = Topic.connection
+    assert_sql(/ORDER BY #{Regexp.escape(c.quote_table_name("topics.id"))} DESC LIMIT/i) do
+      Topic.second_to_last
+    end
+
+    assert_sql(/ORDER BY #{Regexp.escape(c.quote_table_name("topics.updated_at"))} DESC LIMIT/i) do
+      Topic.order(:updated_at).second_to_last
     end
   end
 
@@ -1324,6 +1350,8 @@ class FinderTest < ActiveRecord::TestCase
     assert_equal(0, Entrant.count_by_sql("SELECT COUNT(*) FROM entrants WHERE id > 3"))
     assert_equal(1, Entrant.count_by_sql(["SELECT COUNT(*) FROM entrants WHERE id > ?", 2]))
     assert_equal(2, Entrant.count_by_sql(["SELECT COUNT(*) FROM entrants WHERE id > ?", 1]))
+
+    assert_async_equal 2, Entrant.async_count_by_sql(["SELECT COUNT(*) FROM entrants WHERE id > ?", 1])
   end
 
   def test_find_by_one_attribute

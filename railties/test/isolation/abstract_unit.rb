@@ -8,6 +8,7 @@
 #
 # It is also good to know what is the bare minimum to get
 # Rails booted up.
+require "active_support/testing/strict_warnings"
 require "fileutils"
 require "shellwords"
 
@@ -119,7 +120,7 @@ module TestHelpers
       routes = File.read("#{app_path}/config/routes.rb")
       if routes =~ /(\n\s*end\s*)\z/
         File.open("#{app_path}/config/routes.rb", "w") do |f|
-          f.puts $` + "\nActiveSupport::Deprecation.silence { match ':controller(/:action(/:id))(.:format)', via: :all }\n" + $1
+          f.puts $` + "\nActionDispatch.deprecator.silence { match ':controller(/:action(/:id))(.:format)', via: :all }\n" + $1
         end
       end
 
@@ -464,7 +465,7 @@ module TestHelpers
       $:.reject! { |path| path =~ %r'/(#{to_remove.join('|')})/' }
     end
 
-    def use_postgresql(multi_db: false)
+    def use_postgresql(multi_db: false, database_name: "railties_#{Process.pid}")
       if multi_db
         File.open("#{app_path}/config/database.yml", "w") do |f|
           f.puts <<-YAML
@@ -474,10 +475,10 @@ module TestHelpers
           development:
             primary:
               <<: *default
-              database: railties_test
+              database: #{database_name}_test
             animals:
               <<: *default
-              database: railties_animals_test
+              database: #{database_name}_animals_test
               migrations_paths: db/animals_migrate
           YAML
         end
@@ -489,10 +490,10 @@ module TestHelpers
             pool: 5
           development:
             <<: *default
-            database: railties_development
+            database: #{database_name}_development
           test:
             <<: *default
-            database: railties_test
+            database: #{database_name}_test
           YAML
         end
       end
@@ -532,12 +533,6 @@ Module.new do
   File.open("#{app_template_path}/config/boot.rb", "w") do |f|
     f.puts 'require "bootsnap/setup" if ENV["BOOTSNAP_CACHE_DIR"]'
     f.puts 'require "rails/all"'
-  end
-
-  unless File.exist?("#{RAILS_FRAMEWORK_ROOT}/actionview/lib/assets/compiled/rails-ujs.js")
-    Dir.chdir("#{RAILS_FRAMEWORK_ROOT}/actionview") do
-      sh "yarn build"
-    end
   end
 
   assets_path = "#{RAILS_FRAMEWORK_ROOT}/railties/test/isolation/assets"

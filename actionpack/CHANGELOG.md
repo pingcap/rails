@@ -1,3 +1,113 @@
+*   Add details of cookie name and size to `CookieOverflow` exception.
+
+    *Andy Waite*
+
+*   Don't double log the `controller` or `action` when using `ActiveRecord::QueryLog`
+
+    Previously if you set `config.active_record.query_log_tags` to an array that included
+    `:controller` or `:action`, that item would get logged twice. This bug has been fixed.
+
+    *Alex Ghiculescu*
+
+*   Add the following permissions policy directives: `hid`, `idle-detection`, `screen-wake-lock`,
+    `serial`, `sync-xhr`, `web-share`.
+
+    *Guillaume Cabanel*
+
+*   The `speaker`, `vibrate`, and `vr` permissions policy directives are now
+    deprecated.
+
+    There is no browser support for these directives, and no plan for browser
+    support in the future. You can just remove these directives from your
+    application.
+
+    *Jonathan Hefner*
+
+*   Added the `:status` option to `assert_redirected_to` to specify the precise
+    HTTP status of the redirect. Defaults to `:redirect` for backwards
+    compatibility.
+
+    *Jon Dufresne*
+
+*   Rescue `JSON::ParserError` in Cookies JSON deserializer to discards marshal dumps:
+
+    Without this change, if `action_dispatch.cookies_serializer` is set to `:json` and
+    the app tries to read a `:marshal` serialized cookie, it would error out which wouldn't
+    clear the cookie and force app users to manually clear it in their browser.
+
+    (See #45127 for original bug discussion)
+
+    *Nathan Bardoux*
+
+*   Add `HTTP_REFERER` when following redirects on integration tests
+
+    This makes `follow_redirect!` a closer simulation of what happens in a real browser
+
+    *Felipe Sateler*
+
+*   Added `exclude?` method to `ActionController::Parameters`.
+
+    *Ian Neubert*
+
+*   Rescue `EOFError` exception from `rack` on a multipart request.
+
+    *Nikita Vasilevsky*
+
+*   Log redirects from routes the same way as redirects from controllers.
+
+    *Dennis Paagman*
+
+*   Prevent `ActionDispatch::ServerTiming` from overwriting existing values in `Server-Timing`.
+    Previously, if another middleware down the chain set `Server-Timing` header,
+    it would overwritten by `ActionDispatch::ServerTiming`.
+
+    *Jakub Malinowski*
+
+*   Allow opting out of the `SameSite` cookie attribute when setting a cookie.
+
+    You can opt out of `SameSite` by passing `same_site: nil`.
+
+    `cookies[:foo] = { value: "bar", same_site: nil }`
+
+    Previously, this incorrectly set the `SameSite` attribute to the value of the `cookies_same_site_protection` setting.
+
+    *Alex Ghiculescu*
+
+*   Allow using `helper_method`s in `content_security_policy` and `permissions_policy`
+
+    Previously you could access basic helpers (defined in helper modules), but not
+    helper methods defined using `helper_method`. Now you can use either.
+
+    ```ruby
+    content_security_policy do |p|
+      p.default_src "https://example.com"
+      p.script_src "https://example.com" if helpers.script_csp?
+    end
+    ```
+
+    *Alex Ghiculescu*
+
+*   Reimplement `ActionController::Parameters#has_value?` and `#value?` to avoid parameters and hashes comparison.
+
+    Deprecated equality between parameters and hashes is going to be removed in Rails 7.2.
+    The new implementation takes care of conversions.
+
+    *Seva Stefkin*
+
+*   Allow only String and Symbol keys in `ActionController::Parameters`.
+    Raise `ActionController::InvalidParameterKey` when initializing Parameters
+    with keys that aren't strings or symbols.
+
+    *Seva Stefkin*
+
+*   Add the ability to use custom logic for storing and retrieving CSRF tokens.
+
+    By default, the token will be stored in the session.  Custom classes can be
+    defined to specify arbitrary behavior, but the ability to store them in
+    encrypted cookies is built in.
+
+    *Andrew Kowpak*
+
 *   Make ActionController::Parameters#values cast nested hashes into parameters.
 
     *Gannon McGibbon*

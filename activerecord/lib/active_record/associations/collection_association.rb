@@ -320,13 +320,12 @@ module ActiveRecord
         #   * Otherwise, attributes should have the value found in the database
         def merge_target_lists(persisted, memory)
           return persisted if memory.empty?
-          return memory    if persisted.empty?
 
           persisted.map! do |record|
             if mem_record = memory.delete(record)
 
-              ((record.attribute_names & mem_record.attribute_names) - mem_record.changed_attribute_names_to_save).each do |name|
-                mem_record[name] = record[name]
+              ((record.attribute_names & mem_record.attribute_names) - mem_record.changed_attribute_names_to_save - mem_record.class._attr_readonly).each do |name|
+                mem_record._write_attribute(name, record[name])
               end
 
               mem_record

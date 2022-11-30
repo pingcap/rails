@@ -236,7 +236,34 @@ Below each database statement you can see arrows pointing to the specific source
 
 Verbose query logs are enabled by default in the development environment logs after Rails 5.2.
 
-WARNING: We recommend against using this setting in production environments. It relies on Ruby's `Kernel#caller` method which tends to allocate a lot of memory in order to generate stacktraces of method calls.
+WARNING: We recommend against using this setting in production environments. It relies on Ruby's `Kernel#caller` method which tends to allocate a lot of memory in order to generate stacktraces of method calls. Use query log tags (see below) instead.
+
+SQL Query Comments
+------------------
+
+SQL statements can be commented with tags containing runtime information, such as the name of the controller or job, to
+trace troublesome queries back to the area of the application that generated these statements. This is useful when you are
+logging slow queries (e.g. [MySQL](https://dev.mysql.com/doc/refman/en/slow-query-log.html), [PostgreSQL](https://www.postgresql.org/docs/current/runtime-config-logging.html#GUC-LOG-MIN-DURATION-STATEMENT)),
+viewing currently running queries, or for end-to-end tracing tools.
+
+To enable, add in `application.rb` or any environment initializer:
+
+```rb
+config.active_record.query_log_tags_enabled = true
+```
+
+By default the name of the application, the name and action of the controller, or the name of the job are logged. The
+default format is [SQLCommenter](https://open-telemetry.github.io/opentelemetry-sqlcommenter/). For example:
+
+```
+Article Load (0.2ms)  SELECT "articles".* FROM "articles" /*application='Blog',controller='articles',action='index'*/
+
+Article Update (0.3ms)  UPDATE "articles" SET "title" = ?, "updated_at" = ? WHERE "posts"."id" = ? /*application='Blog',job='ImproveTitleJob'*/  [["title", "Improved Rails debugging guide"], ["updated_at", "2022-10-16 20:25:40.091371"], ["id", 1]]
+```
+
+The behaviour of [`ActiveRecord::QueryLogs`](https://api.rubyonrails.org/classes/ActiveRecord/QueryLogs.html) can be
+modified to include anything that helps connect the dots from the SQL query, such as request and job ids for
+application logs, account and tenant identifiers, etc.
 
 ### Tagged Logging
 
@@ -286,7 +313,7 @@ noticeable with large amounts of logging, but it's a good practice to employ.
 INFO: This section was written by [Jon Cairns at a StackOverflow answer](https://stackoverflow.com/questions/16546730/logging-in-rails-is-there-any-performance-hit/16546935#16546935)
 and it is licensed under [cc by-sa 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
-Debugging with the `debug` gem
+Debugging with the `debug` Gem
 ------------------------------
 
 When your code is behaving in unexpected ways, you can try printing to logs or
@@ -344,6 +371,8 @@ Processing by PostsController#index as HTML
 (rdbg)
 ```
 
+You can exit the debugging session at any time and continue your application execution with the `continue` (or `c`) command.  Or, to exit both the debugging session and your application, use the `quit` (or `q`) command.
+
 ### The Context
 
 After entering the debugging session, you can type in Ruby code as you're in a Rails console or IRB.
@@ -377,7 +406,7 @@ Besides direct evaluation, debugger also helps you collect rich amount of inform
 - `backtrace` (or `bt`) - Backtrace (with additional information).
 - `outline` (or `o`, `ls`) - Available methods, constants, local variables, and instance variables in the current scope.
 
-#### The info command
+#### The `info` Command
 
 It'll give you an overview of the values of local and instance variables that are visible from the current frame.
 
@@ -397,7 +426,7 @@ It'll give you an overview of the values of local and instance variables that ar
 @rendered_format = nil
 ```
 
-#### The backtrace command
+#### The `backtrace` Command
 
 When used without any options, it lists all the frames on the stack:
 
@@ -432,15 +461,14 @@ Don't worry, the `backtrace` command provides 2 options to help you filter frame
 
 It's also possible to use these options together: `backtrace [num] /pattern/`.
 
-#### The outline command
+#### The `outline` Command
 
-This command is similar to `pry` and `irb`'s `ls` command. It will show you what's accessible from you current scope, including:
+This command is similar to `pry` and `irb`'s `ls` command. It will show you what's accessible from the current scope, including:
 
 - Local variables
 - Instance variables
 - Class variables
 - Methods & their sources
-- ...etc.
 
 ```rb
 ActiveSupport::Configurable#methods: config
@@ -470,7 +498,7 @@ class variables: @@raise_on_missing_translations  @@raise_on_open_redirects
 
 ### Breakpoints
 
-There are many ways to insert and trigger a breakpoint in the debugger. In additional to adding debugging statements (e.g. `debugger`) directly in your code, you can also insert breakpoints with commands:
+There are many ways to insert and trigger a breakpoint in the debugger. In addition to adding debugging statements (e.g. `debugger`) directly in your code, you can also insert breakpoints with commands:
 
 - `break` (or `b`)
   - `break` - list all breakpoints
@@ -487,9 +515,9 @@ And to remove them, you can use:
   - `delete` - delete all breakpoints
   - `delete <num>` - delete the breakpoint with id `num`
 
-#### The break command
+#### The `break` Command
 
-**Set a breakpoint with specified line number - e.g. `b 28`**
+**Set a breakpoint on a specified line number - e.g. `b 28`**
 
 ```rb
 [20, 29] in ~/projects/rails-guide-example/app/controllers/posts_controller.rb
@@ -572,7 +600,7 @@ Stop by #0  BP - Line  /Users/st0012/projects/rails-guide-example/app/controller
 Stop by #0  BP - Method  @post.save at /Users/st0012/.rbenv/versions/3.0.1/lib/ruby/gems/3.0.0/gems/activerecord-7.0.0.alpha2/lib/active_record/suppressor.rb:43
 ```
 
-#### The catch command
+#### The `catch` Command
 
 **Stop when an exception is raised - e.g. `catch ActiveRecord::RecordInvalid`**
 
@@ -615,7 +643,7 @@ Stop by #0  BP - Method  @post.save at /Users/st0012/.rbenv/versions/3.0.1/lib/r
 Stop by #1  BP - Catch  "ActiveRecord::RecordInvalid"
 ```
 
-#### The watch command
+#### The `watch` Command
 
 **Stop when the instance variable is changed - e.g. `watch @_response_body`**
 
@@ -659,7 +687,7 @@ Stop by #0  BP - Watch  #<PostsController:0x00007fce69ca5320> @_response_body = 
 (rdbg)
 ```
 
-#### Breakpoint options
+#### Breakpoint Options
 
 In addition to different types of breakpoints, you can also specify options to achieve more advanced debugging workflow. Currently, the debugger supports 4 options:
 
@@ -704,7 +732,7 @@ Please also note that the first 3 options: `do:`, `pre:` and `if:` are also avai
 @rendered_format = nil
 ```
 
-#### Program your debugging workflow
+#### Program Your Debugging Workflow
 
 With those options, you can script your debugging workflow in one line like:
 
@@ -751,43 +779,10 @@ This technique can save you from repeated manual input and make the debugging ex
 
 You can find more commands and configuration options from its [documentation](https://github.com/ruby/debug).
 
-#### Autoloading Caveat
-
-Debugging with `debug` works fine most of the time, but there's an edge case: If you evaluate an expression in the console that autoloads a namespace defined in a file, constants in that namespace won't be found.
-
-For example, if the application has these two files:
-
-```ruby
-# hotel.rb
-class Hotel
-end
-
-# hotel/pricing.rb
-module Hotel::Pricing
-end
-```
-
-and `Hotel` is not yet loaded, then
-
-```
-(rdbg) p Hotel::Pricing
-```
-
-will raise a `NameError`. In some cases, Ruby will be able to resolve an unintended constant in a different scope.
-
-If you hit this, please restart your debugging session with eager loading enabled (`config.eager_load = true`).
-
-Stepping commands line `next`, `continue`, etc., do not present this issue. Namespaces defined implicitly only by
-subdirectories are not subject to this issue either.
-
-See [ruby/debug#408](https://github.com/ruby/debug/issues/408) for details.
-
-Debugging with the `web-console` gem
+Debugging with the `web-console` Gem
 ------------------------------------
 
-Web Console is a bit like `debug`, but it runs in the browser. In any page you
-are developing, you can request a console in the context of a view or a
-controller. The console would be rendered next to your HTML content.
+Web Console is a bit like `debug`, but it runs in the browser. You can request a console in the context of a view or a controller on any page. The console would be rendered next to your HTML content.
 
 ### Console
 

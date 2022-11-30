@@ -4,7 +4,8 @@ require "yaml"
 require "active_support/core_ext/hash/keys"
 require "active_support/core_ext/object/blank"
 require "active_support/key_generator"
-require "active_support/message_verifier"
+require "active_support/message_verifiers"
+require "active_support/deprecation"
 require "active_support/encrypted_configuration"
 require "active_support/hash_with_indifferent_access"
 require "active_support/configuration_file"
@@ -26,7 +27,7 @@ module Rails
   #
   # Besides providing the same configuration as Rails::Engine and Rails::Railtie,
   # the application object has several specific configurations, for example
-  # +cache_classes+, +consider_all_requests_local+, +filter_parameters+,
+  # +enable_reloading+, +consider_all_requests_local+, +filter_parameters+,
   # +logger+, and so forth.
   #
   # Check Rails::Application::Configuration to see them all.
@@ -111,7 +112,9 @@ module Rails
       @app_env_config    = nil
       @ordered_railties  = nil
       @railties          = nil
-      @message_verifiers = {}
+      @key_generators    = {}
+      @message_verifiers = nil
+      @deprecators       = nil
       @ran_load_hooks    = false
 
       @executor          = Class.new(ActiveSupport::Executor)
@@ -149,13 +152,51 @@ module Rails
       routes_reloader.reload!
     end
 
-    # Returns the application's KeyGenerator
-    def key_generator
+    # Returns a key generator (ActiveSupport::CachingKeyGenerator) for a
+    # specified +secret_key_base+. The return value is memoized, so additional
+    # calls with the same +secret_key_base+ will return the same key generator
+    # instance.
+    def key_generator(secret_key_base = self.secret_key_base)
       # number of iterations selected based on consultation with the google security
       # team. Details at https://github.com/rails/rails/pull/6952#issuecomment-7661220
-      @caching_key_generator ||= ActiveSupport::CachingKeyGenerator.new(
+      @key_generators[secret_key_base] ||= ActiveSupport::CachingKeyGenerator.new(
         ActiveSupport::KeyGenerator.new(secret_key_base, iterations: 1000)
       )
+    end
+
+    # Returns a message verifier factory (ActiveSupport::MessageVerifiers). This
+    # factory can be used as a central point to configure and create message
+    # verifiers (ActiveSupport::MessageVerifier) for your application.
+    #
+    # By default, message verifiers created by this factory will generate
+    # messages using the default ActiveSupport::MessageVerifier options. You can
+    # override these options with a combination of
+    # ActiveSupport::MessageVerifiers#clear_rotations and
+    # ActiveSupport::MessageVerifiers#rotate. However, this must be done prior
+    # to building any message verifier instances. For example, in a
+    # +before_initialize+ block:
+    #
+    #   # Use `url_safe: true` when generating messages
+    #   config.before_initialize do |app|
+    #     app.message_verifiers.clear_rotations
+    #     app.message_verifiers.rotate(url_safe: true)
+    #   end
+    #
+    # Message verifiers created by this factory will always use a secret derived
+    # from #secret_key_base when generating messages. +clear_rotations+ will not
+    # affect this behavior. However, older +secret_key_base+ values can be
+    # rotated for verifying messages:
+    #
+    #   # Fall back to old `secret_key_base` when verifying messages
+    #   config.before_initialize do |app|
+    #     app.message_verifiers.rotate(secret_key_base: "old secret_key_base")
+    #   end
+    #
+    def message_verifiers
+      @message_verifiers ||=
+        ActiveSupport::MessageVerifiers.new do |salt, secret_key_base: self.secret_key_base|
+          key_generator(secret_key_base).generate_key(salt)
+        end.rotate_defaults
     end
 
     # Returns a message verifier object.
@@ -177,9 +218,20 @@ module Rails
     #
     # See the ActiveSupport::MessageVerifier documentation for more information.
     def message_verifier(verifier_name)
-      @message_verifiers[verifier_name] ||= begin
-        secret = key_generator.generate_key(verifier_name.to_s)
-        ActiveSupport::MessageVerifier.new(secret)
+      message_verifiers[verifier_name]
+    end
+
+    # A managed collection of deprecators (ActiveSupport::Deprecation::Deprecators).
+    # The collection's configuration methods affect all deprecators in the
+    # collection. Additionally, the collection's +silence+ method silences all
+    # deprecators in the collection for the duration of a given block.
+    #
+    # The collection is prepopulated with a default deprecator, which can be
+    # accessed via <tt>deprecators[:rails]</tt>. More deprecators can be added
+    # via <tt>deprecators[name] = deprecator</tt>.
+    def deprecators
+      @deprecators ||= ActiveSupport::Deprecation::Deprecators.new.tap do |deprecators|
+        deprecators[:rails] = Rails.deprecator
       end
     end
 
@@ -249,7 +301,7 @@ module Rails
     # will be used by middlewares and engines to configure themselves.
     def env_config
       @app_env_config ||= super.merge(
-          "action_dispatch.parameter_filter" => config.filter_parameters,
+          "action_dispatch.parameter_filter" => filter_parameters,
           "action_dispatch.redirect_filter" => config.filter_redirect,
           "action_dispatch.secret_key_base" => secret_key_base,
           "action_dispatch.show_exceptions" => config.action_dispatch.show_exceptions,
@@ -493,6 +545,11 @@ module Rails
       ordered_railties.flatten - [self]
     end
 
+    def load_generators(app = self) # :nodoc:
+      app.ensure_generator_templates_added
+      super
+    end
+
     # Eager loads the application code.
     def eager_load!
       Rails.autoloaders.each(&:eager_load)
@@ -582,6 +639,11 @@ module Rails
       end
     end
 
+    def ensure_generator_templates_added
+      configured_paths = config.generators.templates
+      configured_paths.unshift(*(paths["lib/templates"].existent - configured_paths))
+    end
+
     private
       def generate_development_secret
         if secrets.secret_key_base.nil?
@@ -612,6 +674,14 @@ module Rails
 
       def coerce_same_site_protection(protection)
         protection.respond_to?(:call) ? protection : proc { protection }
+      end
+
+      def filter_parameters
+        if config.precompile_filter_parameters
+          ActiveSupport::ParameterFilter.precompile_filters(config.filter_parameters)
+        else
+          config.filter_parameters
+        end
       end
   end
 end

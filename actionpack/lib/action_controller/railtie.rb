@@ -17,6 +17,10 @@ module ActionController
     config.eager_load_namespaces << AbstractController
     config.eager_load_namespaces << ActionController
 
+    initializer "action_controller.deprecator", before: :load_environment_config do |app|
+      app.deprecators[:action_controller] = ActionController.deprecator
+    end
+
     initializer "action_controller.assets_config", group: :all do |app|
       app.config.action_controller.assets_dir ||= app.config.paths["public"].first
     end
@@ -42,6 +46,11 @@ module ActionController
         end
 
         ActionController::Parameters.action_on_unpermitted_parameters = action_on_unpermitted_parameters
+
+        unless options.allow_deprecated_parameters_hash_equality.nil?
+          ActionController::Parameters.allow_deprecated_parameters_hash_equality =
+            options.allow_deprecated_parameters_hash_equality
+        end
       end
     end
 
@@ -72,7 +81,8 @@ module ActionController
           :permit_all_parameters,
           :action_on_unpermitted_parameters,
           :always_permitted_parameters,
-          :wrap_parameters_by_default
+          :wrap_parameters_by_default,
+          :allow_deprecated_parameters_hash_equality
         )
 
         filtered_options.each do |k, v|
@@ -106,7 +116,7 @@ module ActionController
         app.config.action_controller.log_query_tags_around_actions
 
       if query_logs_tags_enabled
-        app.config.active_record.query_log_tags += [:controller, :action]
+        app.config.active_record.query_log_tags |= [:controller, :action]
 
         ActiveSupport.on_load(:active_record) do
           ActiveRecord::QueryLogs.taggings.merge!(

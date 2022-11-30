@@ -311,6 +311,7 @@ module ActiveRecord # :nodoc:
     include Attributes
     include Locking::Optimistic
     include Locking::Pessimistic
+    include Encryption::EncryptableRecord
     include AttributeMethods
     include Callbacks
     include Timestamp
@@ -325,9 +326,9 @@ module ActiveRecord # :nodoc:
     include Serialization
     include Store
     include SecureToken
+    include TokenFor
     include SignedId
     include Suppressor
-    include Encryption::EncryptableRecord
   end
 
   ActiveSupport.run_load_hooks(:active_record, Base)

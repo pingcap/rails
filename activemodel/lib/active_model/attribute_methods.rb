@@ -398,7 +398,7 @@ module ActiveModel
             mangled_name = "__temp__#{name.unpack1("h*")}"
           end
 
-          code_generator.define_cached_method(name, as: mangled_name, namespace: namespace) do |batch|
+          code_generator.define_cached_method(name, as: mangled_name, namespace: :"#{namespace}_#{proxy_target}") do |batch|
             call_args.map!(&:inspect)
             call_args << parameters if parameters
 
@@ -471,6 +471,7 @@ module ActiveModel
     def attribute_missing(match, *args, &block)
       __send__(match.proxy_target, match.attr_name, *args, &block)
     end
+    ruby2_keywords(:attribute_missing)
 
     # A +Person+ instance with a +name+ attribute can ask
     # <tt>person.respond_to?(:name)</tt>, <tt>person.respond_to?(:name=)</tt>,

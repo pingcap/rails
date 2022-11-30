@@ -451,7 +451,7 @@ NOTE: Defined in `active_support/core_ext/object/with_options.rb`.
 
 [Object#with_options]: https://api.rubyonrails.org/classes/Object.html#method-i-with_options
 
-### JSON support
+### JSON Support
 
 Active Support provides a better implementation of `to_json` than the `json` gem ordinarily provides for Ruby objects. This is because some classes, like `Hash` and `Process::Status` need special handling in order to provide a proper JSON representation.
 
@@ -1691,8 +1691,8 @@ To preserve the case of the string, set the `preserve_case` argument to true. By
 To use a custom separator, override the `separator` argument.
 
 ```ruby
-"John Smith".parameterize(separator: "_") # => "john\_smith"
-"Kurt Gödel".parameterize(separator: "_") # => "kurt\_godel"
+"John Smith".parameterize(separator: "_") # => "john_smith"
+"Kurt Gödel".parameterize(separator: "_") # => "kurt_godel"
 ```
 
 NOTE: Defined in `active_support/core_ext/string/inflections.rb`.
@@ -1858,6 +1858,32 @@ foreign_key = options[:foreign_key] || reflection.active_record.name.foreign_key
 NOTE: Defined in `active_support/core_ext/string/inflections.rb`.
 
 [String#foreign_key]: https://api.rubyonrails.org/classes/String.html#method-i-foreign_key
+
+#### `upcase_first`
+
+The method [`upcase_first`][String#upcase_first] capitalizes the first letter of the receiver:
+
+```ruby
+"employee salary".upcase_first # => "Employee salary"
+"".upcase_first                # => ""
+```
+
+NOTE: Defined in `active_support/core_ext/string/inflections.rb`.
+
+[String#upcase_first]: https://api.rubyonrails.org/classes/String.html#method-i-upcase_first
+
+#### `downcase_first`
+
+The method [`downcase_first`][String#downcase_first] converts the first letter of the receiver to lowercase:
+
+```ruby
+"If I had read Alice in Wonderland".downcase_first # => "if I had read Alice in Wonderland"
+"".downcase_first                                  # => ""
+```
+
+NOTE: Defined in `active_support/core_ext/string/inflections.rb`.
+
+[String#downcase_first]: https://api.rubyonrails.org/classes/String.html#method-i-downcase_first
 
 ### Conversions
 
@@ -2869,7 +2895,7 @@ NOTE: Defined in `active_support/core_ext/hash/deep_merge.rb`.
 [Hash#deep_merge!]: https://api.rubyonrails.org/classes/Hash.html#method-i-deep_merge-21
 [Hash#deep_merge]: https://api.rubyonrails.org/classes/Hash.html#method-i-deep_merge
 
-### Deep duplicating
+### Deep Duplicating
 
 The method [`Hash#deep_dup`][Hash#deep_dup] duplicates itself and all keys and values
 inside recursively with Active Support method `Object#deep_dup`. It works like `Enumerator#each_with_object` with sending `deep_dup` method to each pair inside.
@@ -3132,15 +3158,15 @@ NOTE: Defined in `active_support/core_ext/regexp.rb`.
 Extensions to `Range`
 ---------------------
 
-### `to_s`
+### `to_fs`
 
-Active Support extends the method `Range#to_s` so that it understands an optional format argument. As of this writing the only supported non-default format is `:db`:
+Active Support defines `Range#to_fs` as an alternative to `to_s` that understands an optional format argument. As of this writing the only supported non-default format is `:db`:
 
 ```ruby
-(Date.today..Date.tomorrow).to_s
+(Date.today..Date.tomorrow).to_fs
 # => "2009-10-25..2009-10-26"
 
-(Date.today..Date.tomorrow).to_s(:db)
+(Date.today..Date.tomorrow).to_fs(:db)
 # => "BETWEEN '2009-10-25' AND '2009-10-26'"
 ```
 
@@ -3209,7 +3235,7 @@ NOTE: Defined in `active_support/core_ext/date/calculations.rb`.
 [DateAndTime::Calculations#on_weekend?]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-on_weekend-3F
 [DateAndTime::Calculations#past?]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-past-3F
 
-#### Named dates
+#### Named Dates
 
 ##### `beginning_of_week`, `end_of_week`
 
@@ -3306,7 +3332,14 @@ NOTE: Defined in `active_support/core_ext/date_and_time/calculations.rb`.
 [DateAndTime::Calculations#beginning_of_month]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-beginning_of_month
 [DateAndTime::Calculations#end_of_month]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-end_of_month
 
-##### `beginning_of_quarter`, `end_of_quarter`
+##### `quarter`, `beginning_of_quarter`, `end_of_quarter`
+
+The method [`quarter`][DateAndTime::Calculations#quarter] returns the quarter of the receiver's calendar year:
+
+```ruby
+d = Date.new(2010, 5, 9) # => Sun, 09 May 2010
+d.quarter                # => 2
+```
 
 The methods [`beginning_of_quarter`][DateAndTime::Calculations#beginning_of_quarter] and [`end_of_quarter`][DateAndTime::Calculations#end_of_quarter] return the dates for the beginning and end of the quarter of the receiver's calendar year:
 
@@ -3320,6 +3353,7 @@ d.end_of_quarter         # => Wed, 30 Jun 2010
 
 NOTE: Defined in `active_support/core_ext/date_and_time/calculations.rb`.
 
+[DateAndTime::Calculations#quarter]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-quarter
 [DateAndTime::Calculations#at_beginning_of_quarter]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-at_beginning_of_quarter
 [DateAndTime::Calculations#at_end_of_quarter]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-at_end_of_quarter
 [DateAndTime::Calculations#beginning_of_quarter]: https://api.rubyonrails.org/classes/DateAndTime/Calculations.html#method-i-beginning_of_quarter
@@ -4054,7 +4088,7 @@ Extensions to Pathname
 
 ### `existence`
 
-The [`existence`][Pathname#existence] method returns the receiver if the named file exists otherwise returns +nil+. It is useful for idioms like this:
+The [`existence`][Pathname#existence] method returns the receiver if the named file exists otherwise returns `nil`. It is useful for idioms like this:
 
 ```ruby
 content = Pathname.new("file").existence&.read

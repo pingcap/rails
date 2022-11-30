@@ -80,7 +80,7 @@ $ bin/rails runner 'p UsersHelper'
 UsersHelper
 ```
 
-Rails adds custom directories under `app` to the autoload paths automatically. For example, if your application has `app/presenters`, you don't need to configure anything in order to autoload presenters, it works out of the box.
+Rails adds custom directories under `app` to the autoload paths automatically. For example, if your application has `app/presenters`, you don't need to configure anything in order to autoload presenters; it works out of the box.
 
 The array of default autoload paths can be extended by pushing to `config.autoload_paths`, in `config/application.rb` or `config/environments/*.rb`. For example:
 
@@ -174,11 +174,11 @@ Rails automatically reloads classes and modules if application files in the auto
 
 More precisely, if the web server is running and application files have been modified, Rails unloads all autoloaded constants managed by the `main` autoloader just before the next request is processed. That way, application classes or modules used during that request will be autoloaded again, thus picking up their current implementation in the file system.
 
-Reloading can be enabled or disabled. The setting that controls this behavior is [`config.cache_classes`][], which is false by default in `development` mode (reloading enabled), and true by default in `production` mode (reloading disabled).
+Reloading can be enabled or disabled. The setting that controls this behavior is [`config.enable_reloading`][], which is `true` by default in `development` mode, and `false` by default in `production` mode. For backwards compatibility, Rails also supports `config.cache_classes`, which is equivalent to `!config.enable_reloading`.
 
 Rails uses an evented file monitor to detect files changes by default.  It can be configured instead to detect file changes by walking the autoload paths. This is controlled by the [`config.file_watcher`][] setting.
 
-In a Rails console there is no file watcher active regardless of the value of `config.cache_classes`. This is because, normally, it would be confusing to have code reloaded in the middle of a console session. Similar to an individual request, you generally want a console session to be served by a consistent, non-changing set of application classes and modules.
+In a Rails console there is no file watcher active regardless of the value of `config.enable_reloading`. This is because, normally, it would be confusing to have code reloaded in the middle of a console session. Similar to an individual request, you generally want a console session to be served by a consistent, non-changing set of application classes and modules.
 
 However, you can force a reload in the console by executing `reload!`:
 
@@ -194,7 +194,7 @@ irb(main):003:0> User.object_id
 
 As you can see, the class object stored in the `User` constant is different after reloading.
 
-[`config.cache_classes`]: configuring.html#config-cache-classes
+[`config.enable_reloading`]: configuring.html#config-enable-reloading
 [`config.file_watcher`]: configuring.html#config-file-watcher
 
 ### Reloading and Stale Objects
@@ -233,9 +233,9 @@ However, you cannot autoload from the autoload paths, which are managed by the `
 
 Why? Initializers only run once, when the application boots. If you reboot the server, they run again in a new process, but reloading does not reboot the server, and initializers don't run again. Let's see the two main use cases.
 
-### Use case 1: During boot, load reloadable code
+### Use Case 1: During Boot, Load Reloadable Code
 
-#### Autoload on boot and on each reload
+#### Autoload on Boot and on Each Reload
 
 Let's imagine `ApiGateway` is a reloadable class from `app/services` managed by the `main` autoloader and you need to configure its endpoint while the application boots:
 
@@ -257,7 +257,7 @@ end
 
 NOTE: For historical reasons, this callback may run twice. The code it executes must be idempotent.
 
-#### Autoload on boot only
+#### Autoload on Boot Only
 
 Reloadable classes and modules can be autoloaded in `after_initialize` blocks too. These run on boot, but do not run again on reload. In some exceptional cases this may be what you want.
 
@@ -272,7 +272,7 @@ Rails.application.config.after_initialize do
 end
 ```
 
-### Use case 2: During boot, load code that remains cached
+### Use Case 2: During Boot, Load Code that Remains Cached
 
 Some configurations take a class or module object, and they store it in a place that is not reloaded.
 
@@ -309,7 +309,7 @@ Corollary: Those classes or modules **cannot be reloadable**.
 
 The easiest way to refer to those classes or modules during boot is to have them defined in a directory which does not belong to the autoload paths. For instance, `lib` is an idiomatic choice. It does not belong to the autoload paths by default, but it does belong to `$LOAD_PATH`. Just perform a regular `require` to load it.
 
-As noted above, another option is to have the directory that defines them in the autoload once paths and autoload. Please check the [section about config.autoload_once_paths](https://edgeguides.rubyonrails.org/autoloading_and_reloading_constants.html#config-autoload-once-paths) for details.
+As noted above, another option is to have the directory that defines them in the autoload once paths and autoload. Please check the [section about config.autoload_once_paths](#config-autoload-once-paths) for details.
 
 Eager Loading
 -------------
@@ -404,7 +404,7 @@ By default, Rails uses `String#camelize` to know which constant a given file or 
 
 It could be the case that some particular file or directory name does not get inflected as you want. For instance, `html_parser.rb` is expected to define `HtmlParser` by default. What if you prefer the class to be `HTMLParser`? There are a few ways to customize this.
 
-The easiest way is to define acronyms in `config/initializers/inflections.rb`:
+The easiest way is to define acronyms:
 
 ```ruby
 ActiveSupport::Inflector.inflections(:en) do |inflect|
@@ -416,7 +416,6 @@ end
 Doing so affects how Active Support inflects globally. That may be fine in some applications, but you can also customize how to camelize individual basenames independently from Active Support by passing a collection of overrides to the default inflectors:
 
 ```ruby
-# config/initializers/zeitwerk.rb
 Rails.autoloaders.each do |autoloader|
   autoloader.inflector.inflect(
     "html_parser" => "HTMLParser",
@@ -428,7 +427,6 @@ end
 That technique still depends on `String#camelize`, though, because that is what the default inflectors use as fallback. If you instead prefer not to depend on Active Support inflections at all and have absolute control over inflections, configure the inflectors to be instances of `Zeitwerk::Inflector`:
 
 ```ruby
-# config/initializers/zeitwerk.rb
 Rails.autoloaders.each do |autoloader|
   autoloader.inflector = Zeitwerk::Inflector.new
   autoloader.inflector.inflect(
@@ -441,6 +439,12 @@ end
 There is no global configuration that can affect said instances; they are deterministic.
 
 You can even define a custom inflector for full flexibility. Please check the [Zeitwerk documentation](https://github.com/fxn/zeitwerk#custom-inflector) for further details.
+
+### Where Should Inflection Customization Go?
+
+If an application does not use the `once` autoloader, the snippets above can go in `config/initializers`. For example, `config/initializers/inflections.rb` for the Active Support use case, or `config/initializers/zeitwerk.rb` for the other ones.
+
+Applications using the `once` autoloader have to move or load this configuration from the body of the application class in `config/application.rb`, because the `once` autoloader uses the inflector early in the boot process.
 
 Autoloading and Engines
 -----------------------
